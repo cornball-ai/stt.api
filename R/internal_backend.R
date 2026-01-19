@@ -113,14 +113,17 @@
   }
 
   # Auto mode: try backends in priority order
-  if (!is.null(.get_api_base())) {
-    return("api")
-  }
-
+  # 1. Native whisper (fastest, no external dependencies)
   if (.has_whisper()) {
     return("whisper")
   }
 
+  # 2. API (OpenAI or compatible server)
+  if (!is.null(.get_api_base())) {
+    return("api")
+  }
+
+  # 3. audio.whisper (fallback)
   if (.has_audio_whisper()) {
     return("audio.whisper")
   }
@@ -128,8 +131,8 @@
   stop(
     "No transcription backend available.\n",
     "Either:\n",
-    "  - Set an API endpoint with set_stt_base(), or\n",
     "  - Install whisper: remotes::install_github('cornball-ai/whisper'), or\n",
+    "  - Set an API endpoint with set_stt_base(), or\n",
     "  - Install audio.whisper: install.packages('audio.whisper', repos = 'https://bnosac.github.io/drat')",
     call. = FALSE
   )

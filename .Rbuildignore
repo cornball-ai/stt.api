@@ -1,5 +1,6 @@
-^sttapi\.Rproj$
+^stt\.api\.Rproj$
 ^\.Rproj\.user$
+^\.github$
 ^CLAUDE\.md$
 ^NOTES\.md$
 ^fyi\.md$
@@ -7,3 +8,4 @@
 ^LICENSE\.md$
 ^btw\.md$
 ^man-md$
+^cran-comments\.md$

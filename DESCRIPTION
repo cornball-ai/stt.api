@@ -1,0 +1,21 @@
+Package: stt.api
+Title: OpenAI-Compatible Speech-to-Text API Client
+Version: 0.1.0
+Authors@R:
+    person("Troy", "Hernandez", email = "troy@cornball.ai", role = c("aut", "cre"))
+Description: A minimal-dependency R client for OpenAI-compatible Speech-to-Text
+    APIs with optional local fallbacks. Supports OpenAI, local servers
+    (LM Studio, OpenWebUI, Whisper containers), and the audio.whisper package.
+License: MIT + file LICENSE
+Encoding: UTF-8
+URL: https://github.com/cornball-ai/stt.api
+BugReports: https://github.com/cornball-ai/stt.api/issues
+Imports:
+    curl,
+    jsonlite
+Suggests:
+    audio.whisper,
+    gpu.ctl,
+    processx,
+    tinytest,
+    whisper

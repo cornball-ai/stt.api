@@ -9,8 +9,8 @@
 \arguments{
 \item{file}{Character. Path to the audio file to transcribe.}
 
-\item{model}{Character or NULL. Whisper model name (e.g., "tiny", "base", "small",
-"medium", "large-v3").}
+\item{model}{Character or NULL. Whisper model name (e.g., "tiny", "base",
+"small", "medium", "large-v3").}
 
 \item{language}{Character or NULL. Language code for transcription.}
 }

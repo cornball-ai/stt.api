@@ -12,9 +12,9 @@
 #'   to improve transcription accuracy.
 #' @param response_format Response format for API backend. One of "text",
 #'   "json", or "verbose_json". Ignored for audio.whisper backend.
-#' @param backend Which backend to use: "auto" (default), "api", "whisper",
-#'   or "audio.whisper". Auto mode tries API first (if configured), then
-#'   native whisper, then audio.whisper.
+#' @param backend Which backend to use: "auto" (default), "whisper",
+#'   "audio.whisper", "openai", or "fal". Auto mode tries native whisper first,
+#'   then audio.whisper, then openai API (if configured), then fal.api.
 #'
 #' @return A list with components:
 #' \describe{
@@ -52,7 +52,7 @@ transcribe <- function(
   model = NULL,
   language = NULL,
   response_format = c("json", "text", "verbose_json"),
-  backend = c("auto", "api", "whisper", "audio.whisper"),
+  backend = c("auto", "whisper", "audio.whisper", "openai", "fal"),
   prompt = NULL
 ) {
 
@@ -67,14 +67,14 @@ transcribe <- function(
   # Resolve backend
   resolved_backend <- .choose_backend(backend)
 
-  # Acquire GPU for local whisper API (not for openai.com or audio.whisper)
-  if (resolved_backend == "api" &&
+  # Acquire GPU for local whisper API (not for openai.com)
+  if (resolved_backend == "openai" &&
     !grepl("openai\\.com", getOption("stt.api_base", ""))) {
     .gpuctl_acquire()
   }
 
   # Dispatch to appropriate backend
-  if (resolved_backend == "api") {
+  if (resolved_backend == "openai") {
     .via_api(
       file = file,
       model = model,
@@ -84,6 +84,12 @@ transcribe <- function(
     )
   } else if (resolved_backend == "whisper") {
     .via_whisper(
+      file = file,
+      model = model,
+      language = language
+    )
+  } else if (resolved_backend == "fal") {
+    .via_fal(
       file = file,
       model = model,
       language = language

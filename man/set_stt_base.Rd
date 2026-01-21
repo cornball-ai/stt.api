@@ -7,8 +7,8 @@
 set_stt_base(url)
 }
 \arguments{
-\item{url}{Character string. The base URL (e.g., "http://localhost:4123" or
-"https://api.openai.com").}
+\item{url}{Character string. The base URL (e.g., "http://localhost:4123"
+or "https://api.openai.com").}
 }
 \value{
 Invisibly returns the previous value.

@@ -9,32 +9,32 @@ transcribe(
   model = NULL,
   language = NULL,
   response_format = c("json", "text", "verbose_json"),
-  backend = c("auto", "api", "whisper", "audio.whisper"),
+  backend = c("auto", "whisper", "audio.whisper", "openai", "fal"),
   prompt = NULL
 )
 }
 \arguments{
 \item{file}{Path to the audio file to transcribe.}
 
-\item{model}{Model name to use for transcription. For API backends, this is passed
-directly (e.g., "whisper-1"). For audio.whisper, this is the model size
-(e.g., "tiny", "base", "small", "medium", "large"). If NULL, uses the
-backend's default.}
+\item{model}{Model name to use for transcription. For API backends, this
+is passed directly (e.g., "whisper-1"). For audio.whisper, this is
+the model size (e.g., "tiny", "base", "small", "medium", "large").
+If NULL, uses the backend's default.}
 
-\item{language}{Language code (e.g., "en", "es", "fr"). Optional hint to improve
-transcription accuracy.}
+\item{language}{Language code (e.g., "en", "es", "fr"). Optional hint
+to improve transcription accuracy.}
 
-\item{response_format}{Response format for API backend. One of "text", "json", or
-"verbose_json". Ignored for audio.whisper backend.}
+\item{response_format}{Response format for API backend. One of "text",
+"json", or "verbose_json". Ignored for audio.whisper backend.}
 
-\item{backend}{Which backend to use: "auto" (default), "api", "whisper", or
-"audio.whisper". Auto mode tries API first (if configured), then native
-whisper, then audio.whisper.}
+\item{backend}{Which backend to use: "auto" (default), "whisper",
+"audio.whisper", "openai", or "fal". Auto mode tries native whisper first,
+then audio.whisper, then openai API (if configured), then fal.api.}
 
-\item{prompt}{Optional text to guide the transcription. For API backend, this is
-passed as initial_prompt to help with spelling of names, acronyms, or
-domain-specific terms. Ignored for audio.whisper backend (not supported
-by underlying library).}
+\item{prompt}{Optional text to guide the transcription. For API backend,
+this is passed as initial_prompt to help with spelling of names,
+acronyms, or domain-specific terms. Ignored for audio.whisper backend
+(not supported by underlying library).}
 }
 \value{
 A list with components:
@@ -47,8 +47,8 @@ A list with components:
 }
 }
 \description{
-Transcribe an audio file to text using an OpenAI-compatible API or local
-audio.whisper backend.
+Transcribe an audio file to text using an OpenAI-compatible API or
+local audio.whisper backend.
 }
 \examples{
 \dontrun{

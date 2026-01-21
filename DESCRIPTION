@@ -15,7 +15,9 @@ Imports:
     jsonlite
 Suggests:
     audio.whisper,
+    fal.api,
     gpu.ctl,
     processx,
     tinytest,
     whisper
+RoxygenNote: 7.3.3

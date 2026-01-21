@@ -13,8 +13,8 @@ set_stt_key(key)
 Invisibly returns the previous value.
 }
 \description{
-Sets the API key for hosted STT services (e.g., OpenAI). Local servers
-typically ignore this.
+Sets the API key for hosted STT services (e.g., OpenAI).
+Local servers typically ignore this.
 }
 \examples{
 \dontrun{

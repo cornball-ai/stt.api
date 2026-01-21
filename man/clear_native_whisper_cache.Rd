@@ -7,6 +7,6 @@
 clear_native_whisper_cache()
 }
 \description{
-Removes cached native whisper models from memory. Call this to free
-GPU/RAM after batch processing is complete.
+Removes cached native whisper models from memory. Call this to free GPU/RAM
+after batch processing is complete.
 }

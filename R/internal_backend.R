@@ -72,20 +72,25 @@
   segments
 }
 
+# Check if fal.api is available
+.has_fal <- function() {
+  requireNamespace("fal.api", quietly = TRUE)
+}
+
 # Choose backend based on availability and user preference
-.choose_backend <- function(backend = c("auto", "api", "whisper", "audio.whisper")) {
+.choose_backend <- function(backend = c("auto", "whisper", "audio.whisper", "openai", "fal")) {
   backend <- match.arg(backend)
 
-  if (backend == "api") {
-    # Explicit API request - verify it's configured
+  if (backend == "openai") {
+    # Explicit OpenAI API request - verify it's configured
     if (is.null(.get_api_base())) {
       stop(
-        "Backend 'api' requested but no API base URL is set.\n",
+        "Backend 'openai' requested but no API base URL is set.\n",
         "Use set_stt_base() to configure the endpoint.",
         call. = FALSE
       )
     }
-    return("api")
+    return("openai")
   }
 
   if (backend == "whisper") {
@@ -112,28 +117,46 @@
     return("audio.whisper")
   }
 
+  if (backend == "fal") {
+    # Explicit fal.api request - verify it's available
+    if (!.has_fal()) {
+      stop(
+        "Backend 'fal' requested but fal.api package is not installed.\n",
+        "Install with: remotes::install_github('cornball-ai/fal.api')",
+        call. = FALSE
+      )
+    }
+    return("fal")
+  }
+
   # Auto mode: try backends in priority order
   # 1. Native whisper (fastest, no external dependencies)
   if (.has_whisper()) {
     return("whisper")
   }
 
-  # 2. API (OpenAI or compatible server)
-  if (!is.null(.get_api_base())) {
-    return("api")
-  }
-
-  # 3. audio.whisper (fallback)
+  # 2. audio.whisper (local, no API needed)
   if (.has_audio_whisper()) {
     return("audio.whisper")
+  }
+
+  # 3. OpenAI API (if configured)
+  if (!is.null(.get_api_base())) {
+    return("openai")
+  }
+
+  # 4. fal.api (cloud fallback)
+  if (.has_fal()) {
+    return("fal")
   }
 
   stop(
     "No transcription backend available.\n",
     "Either:\n",
     "  - Install whisper: remotes::install_github('cornball-ai/whisper'), or\n",
+    "  - Install audio.whisper: install.packages('audio.whisper', repos = 'https://bnosac.github.io/drat'), or\n",
     "  - Set an API endpoint with set_stt_base(), or\n",
-    "  - Install audio.whisper: install.packages('audio.whisper', repos = 'https://bnosac.github.io/drat')",
+    "  - Install fal.api: remotes::install_github('cornball-ai/fal.api')",
     call. = FALSE
   )
 }

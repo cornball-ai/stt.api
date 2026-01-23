@@ -1,9 +1,9 @@
-#' Transcribe Audio
+#' Speech to Text
 #'
-#' Transcribe an audio file to text using an OpenAI-compatible API or
+#' Convert an audio file to text using an OpenAI-compatible API or
 #' local audio.whisper backend.
 #'
-#' @param file Path to the audio file to transcribe.
+#' @param file Path to the audio file to convert.
 #' @param model Model name to use for transcription. For API backends, this
 #'   is passed directly (e.g., "whisper-1"). For audio.whisper, this is
 #'   the model size (e.g., "tiny", "base", "small", "medium", "large").
@@ -30,15 +30,15 @@
 #' # Using OpenAI API
 #' set_stt_base("https://api.openai.com")
 #' set_stt_key(Sys.getenv("OPENAI_API_KEY"))
-#' result <- transcribe("speech.wav", model = "whisper-1")
+#' result <- stt("speech.wav", model = "whisper-1")
 #' result$text
 #'
 #' # Using local server
 #' set_stt_base("http://localhost:4123")
-#' result <- transcribe("speech.wav")
+#' result <- stt("speech.wav")
 #'
 #' # Using audio.whisper directly
-#' result <- transcribe("speech.wav", backend = "audio.whisper")
+#' result <- stt("speech.wav", backend = "audio.whisper")
 #' }
 #'
 #' @param prompt Optional text to guide the transcription. For API backend,
@@ -47,7 +47,7 @@
 #'   (not supported by underlying library).
 #'
 #' @export
-transcribe <- function(
+stt <- function(
   file,
   model = NULL,
   language = NULL,

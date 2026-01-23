@@ -61,7 +61,7 @@ set_stt_base("http://localhost:4123")
 # Optional, for hosted services like OpenAI
 set_stt_key(Sys.getenv("OPENAI_API_KEY"))
 
-res <- transcribe("speech.wav")
+res <- stt("speech.wav")
 res$text
 ```
 
@@ -79,7 +79,7 @@ This works with:
 ### 2. Use local `{audio.whisper}` (if installed)
 
 ```r
-res <- transcribe("speech.wav", backend = "audio.whisper")
+res <- stt("speech.wav", backend = "audio.whisper")
 res$text
 ```
 
@@ -90,7 +90,7 @@ If `{audio.whisper}` is not installed and you request it explicitly, `stt.api` w
 ### 3. Automatic backend selection (default)
 
 ```r
-res <- transcribe("speech.wav")
+res <- stt("speech.wav")
 ```
 
 Backend priority:
@@ -103,7 +103,7 @@ Backend priority:
 
 ## Normalized output
 
-Regardless of backend, `transcribe()` always returns the same structure:
+Regardless of backend, `stt()` always returns the same structure:
 
 ```r
 list(
@@ -144,14 +144,14 @@ Useful for Shiny apps and deployment checks.
 Explicit backend choice:
 
 ```r
-transcribe("speech.wav", backend = "api")
-transcribe("speech.wav", backend = "audio.whisper")
+stt("speech.wav", backend = "api")
+stt("speech.wav", backend = "audio.whisper")
 ```
 
 Automatic selection (default):
 
 ```r
-transcribe("speech.wav")
+stt("speech.wav")
 ```
 
 ---
@@ -217,7 +217,7 @@ set_stt_key()
 Example:
 
 ```
-Error in transcribe():
+Error in stt():
 No transcription backend available.
 Set stt.api.api_base or install audio.whisper.
 ```

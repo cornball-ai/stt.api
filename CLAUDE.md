@@ -1,1 +1,0 @@
-/home/troy/claude-files/stt.api.md

@@ -1,6 +1,6 @@
 # stt.api
 
-Speech-to-text API client. Part of [cornyverse](~/cornyverse).
+Speech-to-text API client for R.
 
 ## Exports
 

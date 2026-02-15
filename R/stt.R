@@ -99,7 +99,8 @@ stt <- function(
     .via_audio_whisper(
       file = file,
       model = model,
-      language = language
+      language = language,
+      token_timestamps = TRUE
     )
   }
 }

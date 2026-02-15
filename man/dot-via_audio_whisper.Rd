@@ -3,7 +3,12 @@
 \alias{.via_audio_whisper}
 \title{Internal: Transcribe via audio.whisper package}
 \usage{
-.via_audio_whisper(file, model = NULL, language = NULL)
+.via_audio_whisper(
+  file,
+  model = NULL,
+  language = NULL,
+  token_timestamps = FALSE
+)
 }
 \arguments{
 \item{file}{Character. Path to the audio file to transcribe.}

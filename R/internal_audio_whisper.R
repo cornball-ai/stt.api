@@ -52,7 +52,8 @@ clear_whisper_cache <- function() {
 .via_audio_whisper <- function(
   file,
   model = NULL,
-  language = NULL
+  language = NULL,
+  token_timestamps = FALSE
 ) {
 
   if (!.has_audio_whisper()) {
@@ -74,7 +75,8 @@ clear_whisper_cache <- function() {
   # Build predict arguments
   predict_args <- list(
     object = whisper_model,
-    newdata = file
+    newdata = file,
+    token_timestamps = token_timestamps
   )
 
   if (!is.null(language)) {
@@ -110,12 +112,19 @@ clear_whisper_cache <- function() {
     text <- paste(result$data$text, collapse = " ")
   }
 
-  list(
+  out <- list(
     text = text,
     segments = segments,
     language = language,
     backend = "audio.whisper",
     raw = result
   )
+
+  # Pass through word-level tokens if available
+  if ("token_from" %in% names(result$tokens)) {
+    out$tokens <- result$tokens
+  }
+
+  out
 }
 

@@ -78,7 +78,7 @@ clear_native_whisper_cache <- function() {
 
   # Default model if not specified
   if (is.null(model)) {
-    model <- "tiny"
+    model <- "medium"
   }
 
   # Default language
@@ -93,6 +93,7 @@ clear_native_whisper_cache <- function() {
       file = file,
       model = model,
       language = language,
+      word_timestamps = TRUE,
       verbose = FALSE
     ),
     error = function(e) {
@@ -111,13 +112,20 @@ clear_native_whisper_cache <- function() {
     segments <- .normalize_segments(segments)
   }
 
-  list(
+  out <- list(
     text = result$text,
     segments = segments,
     language = result$language %||% language,
     backend = "whisper",
     raw = result
   )
+
+  # Pass through word-level tokens if available
+  if (!is.null(result$words) && nrow(result$words) > 0 && !is.null(segments)) {
+    out$tokens <- subtitles::words_to_tokens(result$words, segments)
+  }
+
+  out
 }
 
 # Null coalescing operator if not available

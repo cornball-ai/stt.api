@@ -10,13 +10,12 @@ It lets you transcribe audio in R **without caring which backend actually perfor
 
 ### ✅ What it *is*
 
-* A thin R wrapper around **OpenAI-style STT endpoints**
+* A unified interface for speech-to-text in R
 * A way to switch easily between:
 
-  * OpenAI `/v1/audio/transcriptions`
-  * Local OpenAI-compatible servers (LM Studio, OpenWebUI, AnythingLLM, Whisper containers)
-  * Native `{whisper}` (R torch, local GPU) *if available*
-  * Local `{audio.whisper}` *if available*
+  * `{whisper}` (native R torch, local GPU/CPU)
+  * OpenAI `/v1/audio/transcriptions` (cloud or local servers)
+  * `{audio.whisper}` (whisper.cpp)
 * Designed for scripting, Shiny apps, containers, and reproducible pipelines
 
 ### ❌ What it is *not*
@@ -46,70 +45,49 @@ Required dependencies are minimal:
 
 Optional backends:
 
-* `{whisper}` (native R torch transcription)
-* `{audio.whisper}` (local transcription via whisper.cpp)
+* `{whisper}` (recommended, on CRAN)
+* `{audio.whisper}` (whisper.cpp alternative)
 * `{processx}` (Docker helpers)
 
 ---
 
 ## Quick start
 
-### 1. Use an OpenAI-compatible API (local or cloud)
-
 ```r
+install.packages(c("stt.api", "whisper"))
+
 library(stt.api)
 
+res <- stt("speech.wav")
+res$text
+```
+
+That's it. With `{whisper}` installed, `stt()` transcribes locally on GPU or CPU with no configuration needed.
+
+---
+
+## Other backends
+
+stt.api also supports OpenAI-compatible APIs for cloud or container-based transcription:
+
+```r
 set_stt_base("http://localhost:4123")
 # Optional, for hosted services like OpenAI
 set_stt_key(Sys.getenv("OPENAI_API_KEY"))
 
-res <- stt("speech.wav")
-res$text
+res <- stt("speech.wav", backend = "openai")
 ```
 
-This works with:
-
-* OpenAI
-* Chatterbox / Whisper containers
-* LM Studio
-* OpenWebUI
-* AnythingLLM
-* Any server implementing `/v1/audio/transcriptions`
+This works with OpenAI, Whisper containers, LM Studio, OpenWebUI, AnythingLLM, or any server implementing `/v1/audio/transcriptions`.
 
 ---
 
-### 2. Use native `{whisper}` (if installed)
+## Automatic backend selection
 
-```r
-res <- stt("speech.wav", backend = "whisper")
-res$text
-```
-
-Uses the R torch implementation. Runs locally on GPU or CPU.
-
----
-
-### 3. Use local `{audio.whisper}` (if installed)
-
-```r
-res <- stt("speech.wav", backend = "audio.whisper")
-res$text
-```
-
-If a backend is not installed and you request it explicitly, `stt.api` will error with clear instructions.
-
----
-
-### 4. Automatic backend selection (default)
-
-```r
-res <- stt("speech.wav")
-```
-
-Backend priority:
+When you call `stt()` without specifying a backend, it picks the first available:
 
 1. `{whisper}` (native R torch, if installed)
-2. `{audio.whisper}` (if installed)
+2. `{audio.whisper}` (whisper.cpp, if installed)
 3. OpenAI-compatible API (if `stt.api_base` is set)
 4. Error with guidance
 

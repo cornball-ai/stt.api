@@ -15,6 +15,7 @@ It lets you transcribe audio in R **without caring which backend actually perfor
 
   * OpenAI `/v1/audio/transcriptions`
   * Local OpenAI-compatible servers (LM Studio, OpenWebUI, AnythingLLM, Whisper containers)
+  * Native `{whisper}` (R torch, local GPU) *if available*
   * Local `{audio.whisper}` *if available*
 * Designed for scripting, Shiny apps, containers, and reproducible pipelines
 
@@ -24,7 +25,7 @@ It lets you transcribe audio in R **without caring which backend actually perfor
 * Not a model manager
 * Not a GPU / CUDA helper
 * Not an audio preprocessing toolkit
-* Not a replacement for `{audio.whisper}`
+* Not a replacement for `{whisper}` or `{audio.whisper}`
 
 ---
 
@@ -45,7 +46,8 @@ Required dependencies are minimal:
 
 Optional backends:
 
-* `{audio.whisper}` (local transcription)
+* `{whisper}` (native R torch transcription)
+* `{audio.whisper}` (local transcription via whisper.cpp)
 * `{processx}` (Docker helpers)
 
 ---
@@ -76,18 +78,29 @@ This works with:
 
 ---
 
-### 2. Use local `{audio.whisper}` (if installed)
+### 2. Use native `{whisper}` (if installed)
+
+```r
+res <- stt("speech.wav", backend = "whisper")
+res$text
+```
+
+Uses the R torch implementation. Runs locally on GPU or CPU.
+
+---
+
+### 3. Use local `{audio.whisper}` (if installed)
 
 ```r
 res <- stt("speech.wav", backend = "audio.whisper")
 res$text
 ```
 
-If `{audio.whisper}` is not installed and you request it explicitly, `stt.api` will error with clear instructions.
+If a backend is not installed and you request it explicitly, `stt.api` will error with clear instructions.
 
 ---
 
-### 3. Automatic backend selection (default)
+### 4. Automatic backend selection (default)
 
 ```r
 res <- stt("speech.wav")
@@ -95,9 +108,10 @@ res <- stt("speech.wav")
 
 Backend priority:
 
-1. OpenAI-compatible API (if `stt.api.api_base` is set)
+1. `{whisper}` (native R torch, if installed)
 2. `{audio.whisper}` (if installed)
-3. Error with guidance
+3. OpenAI-compatible API (if `stt.api_base` is set)
+4. Error with guidance
 
 ---
 
@@ -110,7 +124,7 @@ list(
   text     = "Transcribed text",
   segments = NULL | data.frame(...),
   language = "en",
-  backend  = "api" | "audio.whisper",
+  backend  = "api" | "whisper" | "audio.whisper",
   raw      = <raw backend response>
 )
 ```
@@ -144,7 +158,8 @@ Useful for Shiny apps and deployment checks.
 Explicit backend choice:
 
 ```r
-stt("speech.wav", backend = "api")
+stt("speech.wav", backend = "openai")
+stt("speech.wav", backend = "whisper")
 stt("speech.wav", backend = "audio.whisper")
 ```
 
@@ -192,10 +207,9 @@ Docker helpers are **explicit and opt-in**.
 
 ```r
 options(
-  stt.api.api_base = NULL,
-  stt.api.api_key  = NULL,
-  stt.api.timeout  = 60,
-  stt.api.backend  = "auto"
+  stt.api_base = NULL,
+  stt.api_key  = NULL,
+  stt.timeout  = 60
 )
 ```
 
@@ -219,7 +233,7 @@ Example:
 ```
 Error in stt():
 No transcription backend available.
-Set stt.api.api_base or install audio.whisper.
+Install whisper, install audio.whisper, or set stt.api_base.
 ```
 
 ---

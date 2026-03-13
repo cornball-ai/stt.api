@@ -54,7 +54,8 @@ Optional backends:
 ## Quick start
 
 ```r
-install.packages(c("stt.api", "whisper"))
+install.packages("whisper")
+remotes::install_github("cornball-ai/stt.api")
 
 library(stt.api)
 

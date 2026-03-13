@@ -31,10 +31,6 @@ It lets you transcribe audio in R **without caring which backend actually perfor
 ## Installation
 
 ```r
-# From CRAN (once available)
-install.packages("stt.api")
-
-# Development version
 remotes::install_github("cornball-ai/stt.api")
 ```
 

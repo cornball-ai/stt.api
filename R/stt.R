@@ -13,8 +13,8 @@
 #' @param response_format Response format for API backend. One of "text",
 #'   "json", or "verbose_json". Ignored for audio.whisper backend.
 #' @param backend Which backend to use: "auto" (default), "whisper",
-#'   "audio.whisper", "openai", or "fal". Auto mode tries native whisper first,
-#'   then audio.whisper, then openai API (if configured), then fal.api.
+#'   "audio.whisper", or "openai". Auto mode tries native whisper first,
+#'   then audio.whisper, then openai API (if configured).
 #'
 #' @return A list with components:
 #' \describe{
@@ -52,7 +52,7 @@ stt <- function(
   model = NULL,
   language = NULL,
   response_format = c("json", "text", "verbose_json"),
-  backend = c("auto", "whisper", "audio.whisper", "openai", "fal"),
+  backend = c("auto", "whisper", "audio.whisper", "openai"),
   prompt = NULL
 ) {
 
@@ -84,12 +84,6 @@ stt <- function(
     )
   } else if (resolved_backend == "whisper") {
     .via_whisper(
-      file = file,
-      model = model,
-      language = language
-    )
-  } else if (resolved_backend == "fal") {
-    .via_fal(
       file = file,
       model = model,
       language = language

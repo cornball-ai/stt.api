@@ -72,13 +72,8 @@
   segments
 }
 
-# Check if fal.api is available
-.has_fal <- function() {
-  requireNamespace("fal.api", quietly = TRUE)
-}
-
 # Choose backend based on availability and user preference
-.choose_backend <- function(backend = c("auto", "whisper", "audio.whisper", "openai", "fal")) {
+.choose_backend <- function(backend = c("auto", "whisper", "audio.whisper", "openai")) {
   backend <- match.arg(backend)
 
   if (backend == "openai") {
@@ -117,18 +112,6 @@
     return("audio.whisper")
   }
 
-  if (backend == "fal") {
-    # Explicit fal.api request - verify it's available
-    if (!.has_fal()) {
-      stop(
-        "Backend 'fal' requested but fal.api package is not installed.\n",
-        "Install with: remotes::install_github('cornball-ai/fal.api')",
-        call. = FALSE
-      )
-    }
-    return("fal")
-  }
-
   # Auto mode: try backends in priority order
   # 1. Native whisper (fastest, no external dependencies)
   if (.has_whisper()) {
@@ -145,18 +128,12 @@
     return("openai")
   }
 
-  # 4. fal.api (cloud fallback)
-  if (.has_fal()) {
-    return("fal")
-  }
-
   stop(
     "No transcription backend available.\n",
     "Either:\n",
     "  - Install whisper: remotes::install_github('cornball-ai/whisper'), or\n",
     "  - Install audio.whisper: install.packages('audio.whisper', repos = 'https://bnosac.github.io/drat'), or\n",
-    "  - Set an API endpoint with set_stt_base(), or\n",
-    "  - Install fal.api: remotes::install_github('cornball-ai/fal.api')",
+    "  - Set an API endpoint with set_stt_base()",
     call. = FALSE
   )
 }

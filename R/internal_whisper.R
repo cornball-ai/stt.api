@@ -120,9 +120,9 @@ clear_native_whisper_cache <- function() {
     raw = result
   )
 
-  # Pass through word-level tokens if available
-  if (!is.null(result$words) && nrow(result$words) > 0 && !is.null(segments)) {
-    out$tokens <- subtitles::words_to_tokens(result$words, segments)
+  # Pass through word-level timestamps if available
+  if (!is.null(result$words) && nrow(result$words) > 0) {
+    out$words <- result$words
   }
 
   out

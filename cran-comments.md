@@ -15,6 +15,5 @@
 The NOTE about "Suggests or Enhances not in mainstream repositories" refers to:
 - `audio.whisper`: Available on GitHub (bnosac/audio.whisper)
 - `gpu.ctl`: Internal package for GPU resource management
-- `whisper`: Available on GitHub (cornball-ai/whisper), submitted to CRAN
 
 These are optional backends and the package works without them.

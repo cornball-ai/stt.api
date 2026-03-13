@@ -3,14 +3,9 @@
 \alias{stt}
 \title{Speech to Text}
 \usage{
-stt(
-  file,
-  model = NULL,
-  language = NULL,
-  response_format = c("json", "text", "verbose_json"),
-  backend = c("auto", "whisper", "audio.whisper", "openai", "fal"),
-  prompt = NULL
-)
+stt(file, model = NULL, language = NULL,
+    response_format = c("json", "text", "verbose_json"),
+    backend = c("auto", "whisper", "audio.whisper", "openai"), prompt = NULL)
 }
 \arguments{
 \item{file}{Path to the audio file to convert.}
@@ -27,8 +22,8 @@ to improve transcription accuracy.}
 "json", or "verbose_json". Ignored for audio.whisper backend.}
 
 \item{backend}{Which backend to use: "auto" (default), "whisper",
-"audio.whisper", "openai", or "fal". Auto mode tries native whisper first,
-then audio.whisper, then openai API (if configured), then fal.api.}
+"audio.whisper", or "openai". Auto mode tries native whisper first,
+then audio.whisper, then openai API (if configured).}
 
 \item{prompt}{Optional text to guide the transcription. For API backend,
 this is passed as initial_prompt to help with spelling of names,

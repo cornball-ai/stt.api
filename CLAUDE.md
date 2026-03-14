@@ -18,7 +18,6 @@ Speech-to-text API client for R.
 | `whisper` | Native R torch whisper | **No** (text only) |
 | `audio.whisper` | audio.whisper R package | Yes |
 | `openai` | OpenAI Whisper API | Yes |
-| `fal` | fal.ai Whisper | Yes |
 | `auto` | Try backends in order | Depends |
 
 ### Backend Selection

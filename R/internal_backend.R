@@ -22,12 +22,6 @@
   getOption("stt.timeout", default = 60)
 }
 
-# Check if audio.whisper is available
-.has_audio_whisper <- function() {
-
-  requireNamespace("audio.whisper", quietly = TRUE)
-}
-
 #' Convert time string to numeric seconds
 #' @param time_str Time string in "HH:MM:SS.mmm" or "MM:SS.mmm" format
 #' @return Numeric seconds
@@ -73,11 +67,10 @@
 }
 
 # Choose backend based on availability and user preference
-.choose_backend <- function(backend = c("auto", "whisper", "audio.whisper", "openai")) {
+.choose_backend <- function(backend = c("auto", "whisper", "openai")) {
   backend <- match.arg(backend)
 
   if (backend == "openai") {
-    # Explicit OpenAI API request - verify it's configured
     if (is.null(.get_api_base())) {
       stop(
         "Backend 'openai' requested but no API base URL is set.\n",
@@ -89,27 +82,14 @@
   }
 
   if (backend == "whisper") {
-    # Explicit native whisper request - verify it's available
     if (!.has_whisper()) {
       stop(
         "Backend 'whisper' requested but package is not installed.\n",
-        "Install with: remotes::install_github('cornball-ai/whisper')",
+        "Install with: install.packages('whisper')",
         call. = FALSE
       )
     }
     return("whisper")
-  }
-
-  if (backend == "audio.whisper") {
-    # Explicit audio.whisper request - verify it's available
-    if (!.has_audio_whisper()) {
-      stop(
-        "Backend 'audio.whisper' requested but package is not installed.\n",
-        "Install with: install.packages('audio.whisper', repos = 'https://bnosac.github.io/drat')",
-        call. = FALSE
-      )
-    }
-    return("audio.whisper")
   }
 
   # Auto mode: try backends in priority order
@@ -118,12 +98,7 @@
     return("whisper")
   }
 
-  # 2. audio.whisper (local, no API needed)
-  if (.has_audio_whisper()) {
-    return("audio.whisper")
-  }
-
-  # 3. OpenAI API (if configured)
+  # 2. OpenAI-compatible API (if configured)
   if (!is.null(.get_api_base())) {
     return("openai")
   }
@@ -131,8 +106,7 @@
   stop(
     "No transcription backend available.\n",
     "Either:\n",
-    "  - Install whisper: remotes::install_github('cornball-ai/whisper'), or\n",
-    "  - Install audio.whisper: install.packages('audio.whisper', repos = 'https://bnosac.github.io/drat'), or\n",
+    "  - Install whisper: install.packages('whisper'), or\n",
     "  - Set an API endpoint with set_stt_base()",
     call. = FALSE
   )

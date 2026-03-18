@@ -15,7 +15,6 @@ It lets you transcribe audio in R **without caring which backend actually perfor
 
   * `{whisper}` (native R torch, local GPU/CPU)
   * OpenAI `/v1/audio/transcriptions` (cloud or local servers)
-  * `{audio.whisper}` (whisper.cpp)
 * Designed for scripting, Shiny apps, containers, and reproducible pipelines
 
 ### ❌ What it is *not*
@@ -24,7 +23,7 @@ It lets you transcribe audio in R **without caring which backend actually perfor
 * Not a model manager
 * Not a GPU / CUDA helper
 * Not an audio preprocessing toolkit
-* Not a replacement for `{whisper}` or `{audio.whisper}`
+* Not a replacement for `{whisper}`
 
 ---
 
@@ -42,8 +41,6 @@ Required dependencies are minimal:
 Optional backends:
 
 * `{whisper}` (recommended, on CRAN)
-* `{audio.whisper}` (whisper.cpp alternative)
-
 
 ---
 
@@ -84,9 +81,8 @@ This works with OpenAI, Whisper containers, LM Studio, OpenWebUI, AnythingLLM, o
 When you call `stt()` without specifying a backend, it picks the first available:
 
 1. `{whisper}` (native R torch, if installed)
-2. `{audio.whisper}` (whisper.cpp, if installed)
-3. OpenAI-compatible API (if `stt.api_base` is set)
-4. Error with guidance
+2. OpenAI-compatible API (if `stt.api_base` is set)
+3. Error with guidance
 
 ---
 
@@ -99,7 +95,7 @@ list(
   text     = "Transcribed text",
   segments = NULL | data.frame(...),
   language = "en",
-  backend  = "api" | "whisper" | "audio.whisper",
+  backend  = "api" | "whisper",
   raw      = <raw backend response>
 )
 ```
@@ -135,7 +131,6 @@ Explicit backend choice:
 ```r
 stt("speech.wav", backend = "openai")
 stt("speech.wav", backend = "whisper")
-stt("speech.wav", backend = "audio.whisper")
 ```
 
 Automatic selection (default):
@@ -193,7 +188,7 @@ Example:
 ```
 Error in stt():
 No transcription backend available.
-Install whisper, install audio.whisper, or set stt.api_base.
+Install whisper or set stt.api_base.
 ```
 
 ---

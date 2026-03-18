@@ -43,7 +43,7 @@ Optional backends:
 
 * `{whisper}` (recommended, on CRAN)
 * `{audio.whisper}` (whisper.cpp alternative)
-* `{processx}` (Docker helpers)
+
 
 ---
 
@@ -160,21 +160,6 @@ This is intentionally chosen because it is:
 * Simple
 * Supported by many local and hosted services
 * Easy to proxy and containerize
-
----
-
-## Docker (optional)
-
-If you run Whisper or OpenAI-compatible STT in Docker, `stt.api` can optionally integrate via `{processx}`.
-
-Example use cases:
-
-* Starting a local Whisper container
-* Checking container health
-* Inspecting logs
-
-Docker helpers are **explicit and opt-in**.
-`stt.api` never starts containers automatically.
 
 ---
 

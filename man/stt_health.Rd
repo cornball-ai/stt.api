@@ -9,7 +9,7 @@ stt_health()
 A list with components:
 \describe{
   \item{ok}{Logical. TRUE if a backend is available.}
-  \item{backend}{Character. The available backend ("api", "audio.whisper"),
+  \item{backend}{Character. The available backend ("api" or "whisper"),
     or NULL if none available.}
   \item{message}{Character. Status message with details.}
 }

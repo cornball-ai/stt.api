@@ -5,13 +5,13 @@
 \usage{
 stt(file, model = NULL, language = NULL,
     response_format = c("json", "text", "verbose_json"),
-    backend = c("auto", "whisper", "audio.whisper", "openai"), prompt = NULL)
+    backend = c("auto", "whisper", "openai"), prompt = NULL)
 }
 \arguments{
 \item{file}{Path to the audio file to convert.}
 
 \item{model}{Model name to use for transcription. For API backends, this
-is passed directly (e.g., "whisper-1"). For audio.whisper, this is
+is passed directly (e.g., "whisper-1"). For whisper, this is
 the model size (e.g., "tiny", "base", "small", "medium", "large").
 If NULL, uses the backend's default.}
 
@@ -19,16 +19,15 @@ If NULL, uses the backend's default.}
 to improve transcription accuracy.}
 
 \item{response_format}{Response format for API backend. One of "text",
-"json", or "verbose_json". Ignored for audio.whisper backend.}
+"json", or "verbose_json". Ignored for whisper backend.}
 
 \item{backend}{Which backend to use: "auto" (default), "whisper",
-"audio.whisper", or "openai". Auto mode tries native whisper first,
-then audio.whisper, then openai API (if configured).}
+or "openai". Auto mode tries whisper first, then openai API
+(if configured).}
 
 \item{prompt}{Optional text to guide the transcription. For API backend,
 this is passed as initial_prompt to help with spelling of names,
-acronyms, or domain-specific terms. Ignored for audio.whisper backend
-(not supported by underlying library).}
+acronyms, or domain-specific terms. Ignored for whisper backend.}
 }
 \value{
 A list with components:
@@ -36,13 +35,13 @@ A list with components:
   \item{text}{The transcribed text as a single string.}
   \item{segments}{A data.frame of segments with timing info, or NULL.}
   \item{language}{The detected or specified language code.}
-  \item{backend}{Which backend was used ("api" or "audio.whisper").}
+  \item{backend}{Which backend was used ("api" or "whisper").}
   \item{raw}{The raw response from the backend.}
 }
 }
 \description{
-Convert an audio file to text using an OpenAI-compatible API or
-local audio.whisper backend.
+Convert an audio file to text using a local whisper backend or
+an OpenAI-compatible API.
 }
 \examples{
 \dontrun{
@@ -55,9 +54,6 @@ result$text
 # Using local server
 set_stt_base("http://localhost:4123")
 result <- stt("speech.wav")
-
-# Using audio.whisper directly
-result <- stt("speech.wav", backend = "audio.whisper")
 }
 
 }

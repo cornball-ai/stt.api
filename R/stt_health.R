@@ -5,7 +5,7 @@
 #' @return A list with components:
 #' \describe{
 #'   \item{ok}{Logical. TRUE if a backend is available.}
-#'   \item{backend}{Character. The available backend ("api", "audio.whisper"),
+#'   \item{backend}{Character. The available backend ("api" or "whisper"),
 #'     or NULL if none available.}
 #'   \item{message}{Character. Status message with details.}
 #' }
@@ -21,34 +21,26 @@
 #' @export
 stt_health <- function() {
 
-  # Check API backend first
-  api_base <- .get_api_base()
-  if (!is.null(api_base)) {
-    health_result <- .check_api_health(api_base)
-    if (health_result$ok) {
-      return(health_result)
-    }
-    # API configured but not healthy - still report it
-    return(health_result)
-  }
-
-  # Check audio.whisper
-  if (.has_audio_whisper()) {
+  # Check whisper package first
+  if (.has_whisper()) {
     return(list(
         ok = TRUE,
-        backend = "audio.whisper",
-        message = "audio.whisper package is available"
+        backend = "whisper",
+        message = "whisper package is available"
       ))
+  }
+
+  # Check API backend
+  api_base <- .get_api_base()
+  if (!is.null(api_base)) {
+    return(.check_api_health(api_base))
   }
 
   # No backend available
   list(
     ok = FALSE,
     backend = NULL,
-    message = paste0(
-      "No backend available. ",
-      "Set stt.api_base or install audio.whisper."
-    )
+    message = "No backend available. Install whisper or set stt.api_base."
   )
 }
 

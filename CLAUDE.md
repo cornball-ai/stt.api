@@ -16,7 +16,6 @@ Speech-to-text API client for R.
 | Backend | Description | Segments |
 |---------|-------------|----------|
 | `whisper` | Native R torch whisper | **No** (text only) |
-| `audio.whisper` | audio.whisper R package | Yes |
 | `openai` | OpenAI Whisper API | Yes |
 | `auto` | Try backends in order | Depends |
 
@@ -38,7 +37,6 @@ stt("audio.wav", backend = "whisper", model = "large-v3")
 options(stt.api_base = "https://api.openai.com")  # API endpoint
 options(stt.api_key = "sk-...")                    # API key
 options(stt.timeout = 120)                         # Request timeout (seconds)
-options(stt.gpuctl = TRUE)                         # Enable GPU management
 ```
 
 ## Known Issues

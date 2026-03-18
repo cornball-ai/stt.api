@@ -1,27 +1,30 @@
 #' Speech to Text
 #'
-#' Convert an audio file to text using an OpenAI-compatible API or
-#' local audio.whisper backend.
+#' Convert an audio file to text using a local whisper backend or
+#' an OpenAI-compatible API.
 #'
 #' @param file Path to the audio file to convert.
 #' @param model Model name to use for transcription. For API backends, this
-#'   is passed directly (e.g., "whisper-1"). For audio.whisper, this is
+#'   is passed directly (e.g., "whisper-1"). For whisper, this is
 #'   the model size (e.g., "tiny", "base", "small", "medium", "large").
 #'   If NULL, uses the backend's default.
 #' @param language Language code (e.g., "en", "es", "fr"). Optional hint
 #'   to improve transcription accuracy.
 #' @param response_format Response format for API backend. One of "text",
-#'   "json", or "verbose_json". Ignored for audio.whisper backend.
+#'   "json", or "verbose_json". Ignored for whisper backend.
 #' @param backend Which backend to use: "auto" (default), "whisper",
-#'   "audio.whisper", or "openai". Auto mode tries native whisper first,
-#'   then audio.whisper, then openai API (if configured).
+#'   or "openai". Auto mode tries whisper first, then openai API
+#'   (if configured).
+#' @param prompt Optional text to guide the transcription. For API backend,
+#'   this is passed as initial_prompt to help with spelling of names,
+#'   acronyms, or domain-specific terms. Ignored for whisper backend.
 #'
 #' @return A list with components:
 #' \describe{
 #'   \item{text}{The transcribed text as a single string.}
 #'   \item{segments}{A data.frame of segments with timing info, or NULL.}
 #'   \item{language}{The detected or specified language code.}
-#'   \item{backend}{Which backend was used ("api" or "audio.whisper").}
+#'   \item{backend}{Which backend was used ("api" or "whisper").}
 #'   \item{raw}{The raw response from the backend.}
 #' }
 #'
@@ -36,15 +39,7 @@
 #' # Using local server
 #' set_stt_base("http://localhost:4123")
 #' result <- stt("speech.wav")
-#'
-#' # Using audio.whisper directly
-#' result <- stt("speech.wav", backend = "audio.whisper")
 #' }
-#'
-#' @param prompt Optional text to guide the transcription. For API backend,
-#'   this is passed as initial_prompt to help with spelling of names,
-#'   acronyms, or domain-specific terms. Ignored for audio.whisper backend
-#'   (not supported by underlying library).
 #'
 #' @export
 stt <- function(
@@ -52,7 +47,7 @@ stt <- function(
   model = NULL,
   language = NULL,
   response_format = c("json", "text", "verbose_json"),
-  backend = c("auto", "whisper", "audio.whisper", "openai"),
+  backend = c("auto", "whisper", "openai"),
   prompt = NULL
 ) {
 
@@ -67,12 +62,6 @@ stt <- function(
   # Resolve backend
   resolved_backend <- .choose_backend(backend)
 
-  # Acquire GPU for local whisper API (not for openai.com)
-  if (resolved_backend == "openai" &&
-    !grepl("openai\\.com", getOption("stt.api_base", ""))) {
-    .gpuctl_acquire()
-  }
-
   # Dispatch to appropriate backend
   if (resolved_backend == "openai") {
     .via_api(
@@ -82,19 +71,11 @@ stt <- function(
       response_format = response_format,
       prompt = prompt
     )
-  } else if (resolved_backend == "whisper") {
+  } else {
     .via_whisper(
       file = file,
       model = model,
       language = language
-    )
-  } else {
-    # audio.whisper backend
-    .via_audio_whisper(
-      file = file,
-      model = model,
-      language = language,
-      token_timestamps = TRUE
     )
   }
 }

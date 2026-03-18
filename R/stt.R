@@ -42,41 +42,31 @@
 #' }
 #'
 #' @export
-stt <- function(
-  file,
-  model = NULL,
-  language = NULL,
-  response_format = c("json", "text", "verbose_json"),
-  backend = c("auto", "whisper", "openai"),
-  prompt = NULL
-) {
+stt <- function(file, model = NULL, language = NULL,
+                response_format = c("json", "text", "verbose_json"),
+                backend = c("auto", "whisper", "openai"), prompt = NULL) {
+    # Validate file
+    if (!file.exists(file)) {
+        stop("File not found: ", file, call. = FALSE)
+    }
 
-  # Validate file
-  if (!file.exists(file)) {
-    stop("File not found: ", file, call. = FALSE)
-  }
+    response_format <- match.arg(response_format)
+    backend <- match.arg(backend)
 
-  response_format <- match.arg(response_format)
-  backend <- match.arg(backend)
+    # Resolve backend
+    resolved_backend <- .choose_backend(backend)
 
-  # Resolve backend
-  resolved_backend <- .choose_backend(backend)
-
-  # Dispatch to appropriate backend
-  if (resolved_backend == "openai") {
-    .via_api(
-      file = file,
-      model = model,
-      language = language,
-      response_format = response_format,
-      prompt = prompt
-    )
-  } else {
-    .via_whisper(
-      file = file,
-      model = model,
-      language = language
-    )
-  }
+    # Dispatch to appropriate backend
+    if (resolved_backend == "openai") {
+        .via_api(
+                 file = file,
+                 model = model,
+                 language = language,
+                 response_format = response_format,
+                 prompt = prompt
+        )
+    } else {
+        .via_whisper(file = file, model = model, language = language)
+    }
 }
 

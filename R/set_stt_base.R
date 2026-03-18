@@ -15,20 +15,20 @@
 #'
 #' @export
 set_stt_base <- function(url) {
-  if (!is.null(url) && !is.character(url)) {
-    stop("url must be a character string or NULL", call. = FALSE)
-  }
-  if (!is.null(url) && length(url) != 1) {
-    stop("url must be a single string", call. = FALSE)
-  }
+    if (!is.null(url) && !is.character(url)) {
+        stop("url must be a character string or NULL", call. = FALSE)
+    }
+    if (!is.null(url) && length(url) != 1) {
+        stop("url must be a single string", call. = FALSE)
+    }
 
-  # Remove trailing slash if present
-  if (!is.null(url)) {
-    url <- sub("/$", "", url)
-  }
+    # Remove trailing slash if present
+    if (!is.null(url)) {
+        url <- sub("/$", "", url)
+    }
 
-  old <- getOption("stt.api_base")
-  options(stt.api_base = url)
-  invisible(old)
+    old <- getOption("stt.api_base")
+    options(stt.api_base = url)
+    invisible(old)
 }
 

@@ -5,7 +5,7 @@
 
 # Check if native whisper package is available
 .has_whisper <- function() {
-  requireNamespace("whisper", quietly = TRUE)
+    requireNamespace("whisper", quietly = TRUE)
 }
 
 #' Get or create cached native whisper model
@@ -13,25 +13,22 @@
 #' @param device Device to use ("auto", "cpu", "cuda")
 #' @return Loaded whisper model object
 #' @keywords internal
-.get_native_whisper_model <- function(
-  model,
-  device = "auto"
-) {
-  cache_key <- paste(model, device, sep = "_")
-  if (is.null(.native_whisper_cache[[cache_key]])) {
-    message("Loading native whisper model: ", model, "...")
-    .native_whisper_cache[[cache_key]] <- tryCatch(
-      whisper::load_whisper_model(model, device = device),
-      error = function(e) {
-        stop(
-          "Failed to load whisper model '", model, "': ", conditionMessage(e),
-          call. = FALSE
+.get_native_whisper_model <- function(model, device = "auto") {
+    cache_key <- paste(model, device, sep = "_")
+    if (is.null(.native_whisper_cache[[cache_key]])) {
+        message("Loading native whisper model: ", model, "...")
+        .native_whisper_cache[[cache_key]] <- tryCatch(
+            whisper::load_whisper_model(model, device = device),
+            error = function(e) {
+            stop(
+                 "Failed to load whisper model '", model, "': ", conditionMessage(e),
+                 call. = FALSE
+            )
+        }
         )
-      }
-    )
-    message("Native whisper model loaded and cached.")
-  }
-  .native_whisper_cache[[cache_key]]
+        message("Native whisper model loaded and cached.")
+    }
+    .native_whisper_cache[[cache_key]]
 }
 
 #' Clear native whisper model cache
@@ -41,15 +38,15 @@
 #'
 #' @export
 clear_native_whisper_cache <- function() {
-  models <- ls(.native_whisper_cache)
-  if (length(models) > 0) {
-    rm(list = models, envir = .native_whisper_cache)
-    gc()
-    message("Cleared ", length(models), " cached native whisper model(s).")
-  } else {
-    message("Native whisper cache is empty.")
-  }
-  invisible(NULL)
+    models <- ls(.native_whisper_cache)
+    if (length(models) > 0) {
+        rm(list = models, envir = .native_whisper_cache)
+        gc()
+        message("Cleared ", length(models), " cached native whisper model(s).")
+    } else {
+        message("Native whisper cache is empty.")
+    }
+    invisible(NULL)
 }
 
 #' Internal: Transcribe via native whisper package
@@ -62,75 +59,70 @@ clear_native_whisper_cache <- function() {
 #' @param language Character or NULL. Language code for transcription.
 #' @return List with transcription results in normalized format.
 #' @keywords internal
-.via_whisper <- function(
-  file,
-  model = NULL,
-  language = NULL
-) {
-
-  if (!.has_whisper()) {
-    stop(
-      "whisper package is not installed.\n",
-      "Install with: remotes::install_github('cornball-ai/whisper')",
-      call. = FALSE
-    )
-  }
-
-  # Default model if not specified
-  if (is.null(model)) {
-    model <- "medium"
-  }
-
-  # Default language
-  if (is.null(language)) {
-    language <- "en"
-  }
-
-  # Run transcription using whisper::transcribe directly
-  # (it handles model loading/caching internally)
-  result <- tryCatch(
-    whisper::transcribe(
-      file = file,
-      model = model,
-      language = language,
-      word_timestamps = TRUE,
-      verbose = FALSE
-    ),
-    error = function(e) {
-      stop(
-        "Transcription failed: ", conditionMessage(e),
-        call. = FALSE
-      )
+.via_whisper <- function(file, model = NULL, language = NULL) {
+    if (!.has_whisper()) {
+        stop(
+             "whisper package is not installed.\n",
+             "Install with: remotes::install_github('cornball-ai/whisper')",
+             call. = FALSE
+        )
     }
-  )
 
-  # Build segments data frame if available
-  segments <- NULL
-  if (!is.null(result$segments) && nrow(result$segments) > 0) {
-    segments <- result$segments
-    # Normalize column names (whisper returns start/end already)
-    segments <- .normalize_segments(segments)
-  }
+    # Default model if not specified
+    if (is.null(model)) {
+        model <- "medium"
+    }
 
-  out <- list(
-    text = result$text,
-    segments = segments,
-    language = result$language %||% language,
-    backend = "whisper",
-    raw = result
-  )
+    # Default language
+    if (is.null(language)) {
+        language <- "en"
+    }
 
-  # Pass through word-level timestamps if available
-  if (!is.null(result$words) && nrow(result$words) > 0) {
-    out$words <- result$words
-  }
+    # Run transcription using whisper::transcribe directly
+    # (it handles model loading/caching internally)
+    result <- tryCatch(
+                       whisper::transcribe(
+            file = file,
+            model = model,
+            language = language,
+            word_timestamps = TRUE,
+            verbose = FALSE
+        ),
+                       error = function(e) {
+        stop("Transcription failed: ", conditionMessage(e), call. = FALSE)
+    }
+    )
 
-  out
+    # Build segments data frame if available
+    segments <- NULL
+    if (!is.null(result$segments) && nrow(result$segments) > 0) {
+        segments <- result$segments
+        # Normalize column names (whisper returns start/end already)
+        segments <- .normalize_segments(segments)
+    }
+
+    out <- list(
+                text = result$text,
+                segments = segments,
+                language = result$language %||% language,
+                backend = "whisper",
+                raw = result
+    )
+
+    # Pass through word-level timestamps if available
+    if (!is.null(result$words) && nrow(result$words) > 0) {
+        out$words <- result$words
+    }
+
+    out
 }
 
 # Null coalescing operator if not available
-`%||%` <- function(
-  x,
-  y
-) if (is.null(x)) y else x
+`%||%` <- function(x, y)
+
+if (is.null(x)) {
+    y
+} else {
+    x
+}
 

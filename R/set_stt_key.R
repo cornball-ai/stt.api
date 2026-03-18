@@ -14,15 +14,15 @@
 #'
 #' @export
 set_stt_key <- function(key) {
-  if (!is.null(key) && !is.character(key)) {
-    stop("key must be a character string or NULL", call. = FALSE)
-  }
-  if (!is.null(key) && length(key) != 1) {
-    stop("key must be a single string", call. = FALSE)
-  }
+    if (!is.null(key) && !is.character(key)) {
+        stop("key must be a character string or NULL", call. = FALSE)
+    }
+    if (!is.null(key) && length(key) != 1) {
+        stop("key must be a single string", call. = FALSE)
+    }
 
-  old <- getOption("stt.api_key")
-  options(stt.api_key = key)
-  invisible(old)
+    old <- getOption("stt.api_key")
+    options(stt.api_key = key)
+    invisible(old)
 }
 

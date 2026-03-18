@@ -1,6 +1,6 @@
 Package: stt.api
 Title: 'OpenAI' Compatible Speech-to-Text API Client
-Version: 0.1.0
+Version: 0.2.0
 Authors@R:
     person("Troy", "Hernandez", email = "troy@cornball.ai", role = c("aut", "cre"))
 Description: A minimal-dependency R client for 'OpenAI'-compatible speech-to-text
@@ -16,4 +16,3 @@ Imports:
 Suggests:
     tinytest,
     whisper
-RoxygenNote: 7.3.3

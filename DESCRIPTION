@@ -2,7 +2,8 @@ Package: stt.api
 Title: 'OpenAI' Compatible Speech-to-Text API Client
 Version: 0.2.0
 Authors@R:
-    person("Troy", "Hernandez", email = "troy@cornball.ai", role = c("aut", "cre"))
+    person("Troy", "Hernandez", email = "troy@cornball.ai", role = c("aut", "cre"),
+           comment = c(ORCID = "0009-0005-4248-604X"))
 Description: A minimal-dependency R client for 'OpenAI'-compatible speech-to-text
     APIs with optional local fallbacks. Supports 'OpenAI', local servers,
     and the 'whisper' package for local transcription.

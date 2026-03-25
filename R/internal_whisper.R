@@ -36,6 +36,12 @@
 #' Removes cached native whisper models from memory. Call this to free GPU/RAM
 #' after batch processing is complete.
 #'
+#' @return No return value, called for side effects (frees memory by removing
+#'   cached models and triggers garbage collection).
+#'
+#' @examples
+#' clear_native_whisper_cache()
+#'
 #' @export
 clear_native_whisper_cache <- function() {
     models <- ls(.native_whisper_cache)

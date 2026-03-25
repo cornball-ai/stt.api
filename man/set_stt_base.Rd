@@ -16,9 +16,7 @@ Invisibly returns the previous value.
 Sets the base URL for OpenAI-compatible STT endpoints.
 }
 \examples{
-\dontrun{
 set_stt_base("http://localhost:4123")
-set_stt_base("https://api.openai.com")
-}
+getOption("stt.api_base")
 
 }

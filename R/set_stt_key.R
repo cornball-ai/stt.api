@@ -8,9 +8,8 @@
 #' @return Invisibly returns the previous value.
 #'
 #' @examples
-#' \dontrun{
-#' set_stt_key(Sys.getenv("OPENAI_API_KEY"))
-#' }
+#' set_stt_key("test-key-123")
+#' getOption("stt.api_key")
 #'
 #' @export
 set_stt_key <- function(key) {

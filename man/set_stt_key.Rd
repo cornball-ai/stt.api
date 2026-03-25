@@ -16,8 +16,7 @@ Sets the API key for hosted STT services (e.g., OpenAI).
 Local servers typically ignore this.
 }
 \examples{
-\dontrun{
-set_stt_key(Sys.getenv("OPENAI_API_KEY"))
-}
+set_stt_key("test-key-123")
+getOption("stt.api_key")
 
 }

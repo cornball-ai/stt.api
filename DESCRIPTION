@@ -5,8 +5,9 @@ Authors@R:
     person("Troy", "Hernandez", email = "troy@cornball.ai", role = c("aut", "cre"),
            comment = c(ORCID = "0009-0005-4248-604X"))
 Description: A minimal-dependency R client for 'OpenAI'-compatible speech-to-text
-    APIs with optional local fallbacks. Supports 'OpenAI', local servers,
-    and the 'whisper' package for local transcription.
+    APIs (see <https://platform.openai.com/docs/api-reference/audio>) with
+    optional local fallbacks. Supports 'OpenAI', local servers, and the
+    'whisper' package for local transcription.
 License: MIT + file LICENSE
 Encoding: UTF-8
 URL: https://github.com/cornball-ai/stt.api

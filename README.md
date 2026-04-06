@@ -1,5 +1,7 @@
 # stt.api
 
+[![CRAN status](https://www.r-pkg.org/badges/version/stt.api)](https://CRAN.R-project.org/package=stt.api)
+
 **`stt.api`** is a minimal, backend-agnostic R client for **OpenAI-compatible speech-to-text (STT) APIs**, with optional local fallbacks.
 
 It lets you transcribe audio in R **without caring which backend actually performs the transcription**.
@@ -30,7 +32,7 @@ It lets you transcribe audio in R **without caring which backend actually perfor
 ## Installation
 
 ```r
-remotes::install_github("cornball-ai/stt.api")
+install.packages("stt.api")
 ```
 
 Required dependencies are minimal:
@@ -42,13 +44,18 @@ Optional backends:
 
 * `{whisper}` (recommended, on CRAN)
 
+Development version:
+
+```r
+remotes::install_github("cornball-ai/stt.api")
+```
+
 ---
 
 ## Quick start
 
 ```r
-install.packages("whisper")
-remotes::install_github("cornball-ai/stt.api")
+install.packages(c("whisper", "stt.api"))
 
 library(stt.api)
 

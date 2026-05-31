@@ -95,7 +95,7 @@ res <- stt("speech.wav")
 
 Backend priority:
 
-1. OpenAI-compatible API (if `stt.api.api_base` is set)
+1. OpenAI-compatible API (if `stt.api_base` is set)
 2. `{audio.whisper}` (if installed)
 3. Error with guidance
 
@@ -192,10 +192,10 @@ Docker helpers are **explicit and opt-in**.
 
 ```r
 options(
-  stt.api.api_base = NULL,
-  stt.api.api_key  = NULL,
-  stt.api.timeout  = 60,
-  stt.api.backend  = "auto"
+  stt.api_base = NULL,
+  stt.api_key  = NULL,
+  stt.timeout  = 60,
+  stt.backend  = "auto"
 )
 ```
 
@@ -219,7 +219,7 @@ Example:
 ```
 Error in stt():
 No transcription backend available.
-Set stt.api.api_base or install audio.whisper.
+Set stt.api_base or install audio.whisper.
 ```
 
 ---

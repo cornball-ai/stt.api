@@ -38,6 +38,10 @@ A list with components:
   \item{backend}{Which backend was used ("api" or "whisper").}
   \item{raw}{The raw response from the backend.}
 }
+The result also carries a \code{"call_record"} attribute (cornball_sidecar
+v1, as in xtx.api/tts.api): the resolved request, elapsed seconds, and a
+timestamp -- provenance that rides with the transcription when callers
+serialize it.
 }
 \description{
 Convert an audio file to text using a local whisper backend or

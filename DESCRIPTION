@@ -1,6 +1,6 @@
 Package: stt.api
 Title: 'OpenAI' Compatible Speech-to-Text API Client
-Version: 0.2.1
+Version: 0.2.1.1
 Authors@R: c(
     person("Troy", "Hernandez", email = "troy@cornball.ai", role = c("aut", "cre"),
            comment = c(ORCID = "0009-0005-4248-604X")),

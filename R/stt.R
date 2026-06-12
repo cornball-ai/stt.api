@@ -27,6 +27,10 @@
 #'   \item{backend}{Which backend was used ("api" or "whisper").}
 #'   \item{raw}{The raw response from the backend.}
 #' }
+#' The result also carries a \code{"call_record"} attribute (cornball_sidecar
+#' v1, as in xtx.api/tts.api): the resolved request, elapsed seconds, and a
+#' timestamp -- provenance that rides with the transcription when callers
+#' serialize it.
 #'
 #' @examples
 #' \dontrun{
@@ -57,7 +61,8 @@ stt <- function(file, model = NULL, language = NULL,
     resolved_backend <- .choose_backend(backend)
 
     # Dispatch to appropriate backend
-    if (resolved_backend == "openai") {
+    started <- Sys.time()
+    res <- if (resolved_backend == "openai") {
         .via_api(
                  file = file,
                  model = model,
@@ -68,5 +73,21 @@ stt <- function(file, model = NULL, language = NULL,
     } else {
         .via_whisper(file = file, model = model, language = language)
     }
+    # stt produces an R object, not a media file, so the call record rides as
+    # an attribute (cornball_sidecar v1, as in xtx.api/tts.api); callers that
+    # serialize the result keep its provenance with it.
+    attr(res, "call_record") <- list(
+        cornball_sidecar = 1L, package = "stt.api",
+        version = as.character(utils::packageVersion("stt.api")),
+        fn = "stt",
+        request = Filter(Negate(is.null),
+                         list(file = file, model = model,
+                              language = language,
+                              response_format = response_format,
+                              backend = resolved_backend, prompt = prompt)),
+        elapsed = round(as.numeric(difftime(Sys.time(), started,
+            units = "secs")), 2),
+        created = format(Sys.time(), "%Y-%m-%dT%H:%M:%S%z"))
+    res
 }
 

@@ -12,9 +12,15 @@
 #'   to improve transcription accuracy.
 #' @param response_format Response format for API backend. One of "text",
 #'   "json", or "verbose_json". Ignored for whisper backend.
-#' @param backend Which backend to use: "auto" (default), "whisper",
-#'   or "openai". Auto mode tries whisper first, then openai API
-#'   (if configured).
+#' @param backend Which engine to use: "auto" (default), "whisper",
+#'   or "openai". Auto mode tries whisper first, then the openai API
+#'   (if configured). See \code{source} for *where* the engine runs.
+#' @param source Where the engine runs: "auto" (default), "api" for an HTTP
+#'   service (OpenAI, or a self-hosted whisper server; see
+#'   \code{\link{set_stt_base}}), or "package" for the in-process whisper R
+#'   package. "auto" runs whisper in-process and openai via the API, matching
+#'   the previous behavior. Use \code{backend = "whisper", source = "api"} to
+#'   reach a whisper \code{serve()} endpoint.
 #' @param prompt Optional text to guide the transcription. For API backend,
 #'   this is passed as initial_prompt to help with spelling of names,
 #'   acronyms, or domain-specific terms. Ignored for whisper backend.
@@ -40,15 +46,19 @@
 #' result <- stt("speech.wav", model = "whisper-1")
 #' result$text
 #'
-#' # Using local server
-#' set_stt_base("http://localhost:4123")
-#' result <- stt("speech.wav")
+#' # Using a self-hosted whisper serve() endpoint
+#' set_stt_base("http://troy-g5:7809")
+#' result <- stt("speech.wav", backend = "whisper", source = "api")
+#'
+#' # In-process whisper package
+#' result <- stt("speech.wav", backend = "whisper", source = "package")
 #' }
 #'
 #' @export
 stt <- function(file, model = NULL, language = NULL,
                 response_format = c("json", "text", "verbose_json"),
-                backend = c("auto", "whisper", "openai"), prompt = NULL) {
+                backend = c("auto", "whisper", "openai"),
+                source = c("auto", "api", "package"), prompt = NULL) {
     # Validate file
     if (!file.exists(file)) {
         stop("File not found: ", file, call. = FALSE)
@@ -56,13 +66,14 @@ stt <- function(file, model = NULL, language = NULL,
 
     response_format <- match.arg(response_format)
     backend <- match.arg(backend)
+    source <- match.arg(source)
 
-    # Resolve backend
-    resolved_backend <- .choose_backend(backend)
+    # Resolve the engine and where it runs (in-process package vs HTTP API)
+    route <- .resolve_route(backend, source)
 
-    # Dispatch to appropriate backend
+    # Dispatch to appropriate route
     started <- Sys.time()
-    res <- if (resolved_backend == "openai") {
+    res <- if (route$route == "api") {
         .via_api(
                  file = file,
                  model = model,
@@ -84,7 +95,8 @@ stt <- function(file, model = NULL, language = NULL,
                          list(file = file, model = model,
                               language = language,
                               response_format = response_format,
-                              backend = resolved_backend, prompt = prompt)),
+                              backend = route$backend, source = route$route,
+                              prompt = prompt)),
         elapsed = round(as.numeric(difftime(Sys.time(), started,
             units = "secs")), 2),
         created = format(Sys.time(), "%Y-%m-%dT%H:%M:%S%z"))

@@ -15,7 +15,8 @@ It lets you transcribe audio in R **without caring which backend actually perfor
 * A unified interface for speech-to-text in R
 * A way to switch easily between:
 
-  * `{whisper}` (native R torch, local GPU/CPU)
+  * `{whisper}` (native R torch, local GPU/CPU, in-process)
+  * a self-hosted `whisper::serve()` endpoint over HTTP (`source = "api"`)
   * OpenAI `/v1/audio/transcriptions` (cloud or local servers)
 * Designed for scripting, Shiny apps, containers, and reproducible pipelines
 
@@ -80,6 +81,19 @@ res <- stt("speech.wav", backend = "openai")
 ```
 
 This works with OpenAI, Whisper containers, LM Studio, OpenWebUI, AnythingLLM, or any server implementing `/v1/audio/transcriptions`.
+
+### Where the engine runs: the `source` axis
+
+`source` selects *where* a backend runs, separately from `backend` (*which*
+engine): `"auto"` (default), `"api"` (HTTP), or `"package"` (in-process).
+`"auto"` keeps the previous behavior — whisper in-process, openai via the API —
+so existing calls are unchanged. To reach a self-hosted `whisper::serve()`
+endpoint instead of running whisper in-process:
+
+```r
+set_stt_base("http://troy-g5:7809")          # the whisper::serve() endpoint
+res <- stt("speech.wav", backend = "whisper", source = "api")
+```
 
 ---
 

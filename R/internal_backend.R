@@ -71,49 +71,72 @@
     segments
 }
 
-# Choose backend based on availability and user preference
-.choose_backend <- function(backend = c("auto", "whisper", "openai")) {
+# Resolve the (backend, source) pair to a concrete route.
+#
+# Two axes, mirroring tts.api: `backend` is the engine ("whisper" or "openai",
+# "auto" picks), `source` is where it runs ("package" in-process, "api" over
+# HTTP, "auto" picks). Returns list(backend = , route = ) where route is one of
+# "package" or "api". source = "auto" reproduces the previous behavior (whisper
+# in-process, openai via API), so existing calls are unchanged.
+.resolve_route <- function(backend = c("auto", "whisper", "openai"),
+                           source = c("auto", "api", "package")) {
     backend <- match.arg(backend)
+    source <- match.arg(source)
 
     if (backend == "openai") {
-        if (is.null(.get_api_base())) {
-            stop(
-                 "Backend 'openai' requested but no API base URL is set.\n",
-                 "Use set_stt_base() to configure the endpoint.",
-                 call. = FALSE
-            )
+        if (source == "package") {
+            stop("source = 'package' is only available for backend = ",
+                 "'whisper'; openai runs via the API (source = 'api').",
+                 call. = FALSE)
         }
-        return("openai")
-    }
-
-    if (backend == "whisper") {
-        if (!.has_whisper()) {
-            stop(
-                 "Backend 'whisper' requested but package is not installed.\n",
-                 "Install with: install.packages('whisper')",
-                 call. = FALSE
-            )
+        route <- "api"
+    } else if (backend == "whisper") {
+        # auto / package -> in-process; api -> a whisper serve() endpoint
+        route <- if (source == "api") "api" else "package"
+    } else {
+        # backend == "auto": pick engine from source and availability
+        if (source == "package") {
+            backend <- "whisper"
+            route <- "package"
+        } else if (source == "api") {
+            backend <- if (!is.null(.get_api_base())) "openai" else "whisper"
+            route <- "api"
+        } else {
+            # source == "auto": whisper in-process first, then API
+            if (.has_whisper()) {
+                backend <- "whisper"
+                route <- "package"
+            } else if (!is.null(.get_api_base())) {
+                backend <- "openai"
+                route <- "api"
+            } else {
+                stop(
+                     "No transcription backend available.\n",
+                     "Either:\n",
+                     "  - Install whisper: install.packages('whisper'), or\n",
+                     "  - Set an API endpoint with set_stt_base()",
+                     call. = FALSE
+                )
+            }
         }
-        return("whisper")
     }
 
-    # Auto mode: try backends in priority order
-    # 1. Native whisper (fastest, no external dependencies)
-    if (.has_whisper()) {
-        return("whisper")
+    # Availability checks for the resolved route
+    if (route == "package" && !.has_whisper()) {
+        stop(
+             "Backend 'whisper' requested but package is not installed.\n",
+             "Install with: install.packages('whisper')",
+             call. = FALSE
+        )
+    }
+    if (route == "api" && is.null(.get_api_base())) {
+        stop(
+             "API route requested but no API base URL is set.\n",
+             "Use set_stt_base() to configure the endpoint.",
+             call. = FALSE
+        )
     }
 
-    # 2. OpenAI-compatible API (if configured)
-    if (!is.null(.get_api_base())) {
-        return("openai")
-    }
-
-    stop(
-         "No transcription backend available.\n",
-         "Either:\n",
-         "  - Install whisper: install.packages('whisper'), or\n",
-         "  - Set an API endpoint with set_stt_base()",
-         call. = FALSE
-    )
+    list(backend = backend, route = route)
 }
 

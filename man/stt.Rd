@@ -5,7 +5,8 @@
 \usage{
 stt(file, model = NULL, language = NULL,
     response_format = c("json", "text", "verbose_json"),
-    backend = c("auto", "whisper", "openai"), prompt = NULL)
+    backend = c("auto", "whisper", "openai"),
+    source = c("auto", "api", "package"), prompt = NULL)
 }
 \arguments{
 \item{file}{Path to the audio file to convert.}
@@ -21,9 +22,16 @@ to improve transcription accuracy.}
 \item{response_format}{Response format for API backend. One of "text",
 "json", or "verbose_json". Ignored for whisper backend.}
 
-\item{backend}{Which backend to use: "auto" (default), "whisper",
-or "openai". Auto mode tries whisper first, then openai API
-(if configured).}
+\item{backend}{Which engine to use: "auto" (default), "whisper",
+or "openai". Auto mode tries whisper first, then the openai API
+(if configured). See \code{source} for *where* the engine runs.}
+
+\item{source}{Where the engine runs: "auto" (default), "api" for an HTTP
+service (OpenAI, or a self-hosted whisper server; see
+\code{\link{set_stt_base}}), or "package" for the in-process whisper R
+package. "auto" runs whisper in-process and openai via the API, matching
+the previous behavior. Use \code{backend = "whisper", source = "api"} to
+reach a whisper \code{serve()} endpoint.}
 
 \item{prompt}{Optional text to guide the transcription. For API backend,
 this is passed as initial_prompt to help with spelling of names,
@@ -55,9 +63,12 @@ set_stt_key(Sys.getenv("OPENAI_API_KEY"))
 result <- stt("speech.wav", model = "whisper-1")
 result$text
 
-# Using local server
-set_stt_base("http://localhost:4123")
-result <- stt("speech.wav")
+# Using a self-hosted whisper serve() endpoint
+set_stt_base("http://troy-g5:7809")
+result <- stt("speech.wav", backend = "whisper", source = "api")
+
+# In-process whisper package
+result <- stt("speech.wav", backend = "whisper", source = "package")
 }
 
 }

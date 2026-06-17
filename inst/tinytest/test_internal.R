@@ -47,3 +47,31 @@ df_numeric <- data.frame(text = "hello", start = 10.5, end = 15.0)
 result <- stt.api:::.normalize_segments(df_numeric)
 expect_equal(result$start, 10.5)
 expect_equal(result$end, 15.0)
+
+# --- .resolve_route() (source axis, mirrors tts.api) ---
+# Use a temporary api base for the "api" routes; clear whisper option deps by
+# operating only on routes that don't require the whisper package to be loaded.
+old_base <- getOption("stt.api_base")
+on.exit(options(stt.api_base = old_base), add = TRUE)
+
+# openai always routes to the API (base required)
+options(stt.api_base = "http://localhost:9999")
+r <- stt.api:::.resolve_route("openai", "auto")
+expect_equal(r$route, "api")
+expect_equal(r$backend, "openai")
+
+# openai + package is an error (no in-process engine for openai)
+expect_error(stt.api:::.resolve_route("openai", "package"))
+
+# whisper + api routes to the API (the serve() endpoint), base required
+r <- stt.api:::.resolve_route("whisper", "api")
+expect_equal(r$route, "api")
+expect_equal(r$backend, "whisper")
+
+# auto + api with a base set -> openai over the API
+r <- stt.api:::.resolve_route("auto", "api")
+expect_equal(r$route, "api")
+
+# api route with no base set is an error
+options(stt.api_base = NULL)
+expect_error(stt.api:::.resolve_route("whisper", "api"))

@@ -26,6 +26,17 @@
 
     form_data$response_format <- response_format
 
+    # Request word-level timestamps for verbose_json, so result$words is
+    # populated like the in-process whisper backend. OpenAI treats word and
+    # segment as separate granularities, and requesting word alone can suppress
+    # segments -- so ask for BOTH (two array-style fields). whisper::serve
+    # honors either.
+    if (identical(response_format, "verbose_json")) {
+        gran <- list("segment", "word")
+        names(gran) <- c("timestamp_granularities[]", "timestamp_granularities[]")
+        form_data <- c(form_data, gran)
+    }
+
     # Build headers (curl expects "Name: Value" format)
     headers <- "Accept: application/json"
     if (!is.null(api_key) && nchar(api_key) > 0) {
@@ -111,12 +122,29 @@
         segments <- .normalize_segments(segments)
     }
 
-    list(
+    # Extract word-level timestamps if available (verbose_json + word
+    # granularity), mirroring the native whisper backend's result$words.
+    words <- NULL
+    if (!is.null(parsed$words) && length(parsed$words) > 0) {
+        words <- tryCatch(
+                          do.call(rbind, lapply(parsed$words, function(w) {
+            data.frame(word = w$word, start = w$start, end = w$end,
+                       stringsAsFactors = FALSE)
+        })),
+                          error = function(e) NULL
+        )
+    }
+
+    out <- list(
          text = parsed$text %||% "",
          segments = segments,
          language = parsed$language %||% language,
          backend = "api",
          raw = parsed
     )
+    if (!is.null(words)) {
+        out$words <- words
+    }
+    out
 }
 

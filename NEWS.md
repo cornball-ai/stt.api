@@ -1,9 +1,10 @@
 # stt.api 0.2.1.3
 
 * The API backend now requests and parses word-level timestamps: with
-  `response_format = "verbose_json"` it sends `timestamp_granularities[]=word`
-  and returns `result$words` (word/start/end), matching the native whisper
-  backend. Works against OpenAI and a self-hosted `whisper::serve()`.
+  `response_format = "verbose_json"` it sends `timestamp_granularities[]` for
+  both `segment` and `word` (requesting word alone can suppress segments on
+  OpenAI) and returns `result$words` (word/start/end), matching the native
+  whisper backend. Works against OpenAI and a self-hosted `whisper::serve()`.
 
 # stt.api 0.2.1.2
 

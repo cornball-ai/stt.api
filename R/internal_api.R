@@ -27,10 +27,14 @@
     form_data$response_format <- response_format
 
     # Request word-level timestamps for verbose_json, so result$words is
-    # populated the same way the in-process whisper backend does (OpenAI and
-    # whisper::serve both honor timestamp_granularities[]=word).
+    # populated like the in-process whisper backend. OpenAI treats word and
+    # segment as separate granularities, and requesting word alone can suppress
+    # segments -- so ask for BOTH (two array-style fields). whisper::serve
+    # honors either.
     if (identical(response_format, "verbose_json")) {
-        form_data[["timestamp_granularities[]"]] <- "word"
+        gran <- list("segment", "word")
+        names(gran) <- c("timestamp_granularities[]", "timestamp_granularities[]")
+        form_data <- c(form_data, gran)
     }
 
     # Build headers (curl expects "Name: Value" format)

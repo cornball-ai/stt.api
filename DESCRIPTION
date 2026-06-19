@@ -6,7 +6,7 @@ Authors@R: c(
            comment = c(ORCID = "0009-0005-4248-604X")),
     person("Cornball AI", role = "cph"))
 Description: A minimal-dependency R client for 'OpenAI'-compatible speech-to-text
-    APIs (see <https://platform.openai.com/docs/api-reference/audio>) with
+    APIs (see <https://developers.openai.com/api/reference/resources/audio>) with
     optional local fallbacks. Supports 'OpenAI', local servers, and the
     'whisper' package for local transcription.
 License: MIT + file LICENSE

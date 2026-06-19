@@ -42,8 +42,14 @@ A list with components:
 \describe{
   \item{text}{The transcribed text as a single string.}
   \item{segments}{A data.frame of segments with timing info, or NULL.}
+  \item{words}{A data.frame of word-level timestamps (word, start, end),
+    present only when the API returns word granularity (verbose_json);
+    otherwise absent.}
   \item{language}{The detected or specified language code.}
-  \item{backend}{Which backend was used ("api" or "whisper").}
+  \item{backend}{The legacy execution route ("api" or "whisper"). This
+    reports *where* the engine ran, not the engine itself; the resolved
+    \code{backend}/\code{source} pair lives in the \code{"call_record"}
+    attribute.}
   \item{raw}{The raw response from the backend.}
 }
 The result also carries a \code{"call_record"} attribute (cornball_sidecar

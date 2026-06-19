@@ -115,11 +115,17 @@ Regardless of backend, `stt()` always returns the same structure:
 list(
   text     = "Transcribed text",
   segments = NULL | data.frame(...),
+  words    = data.frame(word, start, end),  # only with word-level timing
   language = "en",
-  backend  = "api" | "whisper",
+  backend  = "api" | "whisper",             # legacy execution route
   raw      = <raw backend response>
 )
 ```
+
+`words` is present only when the API returns word granularity (`verbose_json`);
+otherwise it's absent. `backend` reports *where* the engine ran (the legacy
+execution route), not the engine itself: the resolved `backend`/`source` pair
+lives in the `"call_record"` attribute.
 
 This makes it easy to switch backends without changing downstream code.
 

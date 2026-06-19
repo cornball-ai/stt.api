@@ -6,7 +6,8 @@
 
 * local Ubuntu 24.04, R 4.6.0
 * GitHub Actions: ubuntu-latest, macos-latest
-* win-builder: R-devel
+* local Windows, R 4.6.0
+* local Windows, R-devel (4.7.0 pre-release)
 
 ## Changes since last CRAN release (0.2.1)
 

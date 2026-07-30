@@ -39,6 +39,16 @@
 #'     attribute.}
 #'   \item{raw}{The raw response from the backend.}
 #' }
+#' When the result has usable segments (\code{start}/\code{end}/\code{text}
+#' columns), it additionally carries the shape subtitle tooling expects: a
+#' \code{data} data.frame with \code{from}/\code{to} timestamp strings
+#' ("HH:MM:SS.mmm") and \code{text}, and class
+#' \code{c("stt_result", "whisper_transcription")}, so it feeds
+#' \code{subtitles::whisper_to_srt()} and \code{subtitles::whisper_to_ass()}
+#' directly. Note the API route returns segments only with
+#' \code{response_format = "verbose_json"}. Results without usable segments
+#' are plain lists, as before.
+#'
 #' The result also carries a \code{"call_record"} attribute (cornball_sidecar
 #' v1, as in xtx.api/tts.api): the resolved request, elapsed seconds, and a
 #' timestamp -- provenance that rides with the transcription when callers

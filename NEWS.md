@@ -5,9 +5,12 @@
   either route:
 
   ```r
-  x <- stt.api::stt("video.mp4")
+  x <- stt.api::stt("video.mp4", response_format = "verbose_json")
   subtitles::whisper_to_srt(x, "video.srt")
   ```
+
+  (`verbose_json` matters on the API route, which returns segments only at
+  that granularity; the in-process route always returns segments.)
 
   A result with segments gains a `data` frame of `from`/`to` timestamp strings
   and `text`, and class `c("stt_result", "whisper_transcription")`. Additive:

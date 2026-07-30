@@ -90,6 +90,12 @@ stt <- function(file, model = NULL, language = NULL,
     } else {
         .via_whisper(file = file, model = model, language = language)
     }
+    # Both routes land here with the same normalized shape, so this is where
+    # the subtitle-tool shape goes on: the result feeds
+    # subtitles::whisper_to_srt()/whisper_to_ass() directly whether it came
+    # from the HTTP API or the in-process whisper package.
+    res <- .attach_subtitle_shape(res)
+
     # stt produces an R object, not a media file, so the call record rides as
     # an attribute (cornball_sidecar v1, as in xtx.api/tts.api); callers that
     # serialize the result keep its provenance with it.

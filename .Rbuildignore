@@ -9,3 +9,6 @@
 ^btw\.md$
 ^man-md$
 ^cran-comments\.md$
+
+# r-ci writes this into the package root during CI setup
+^run\.sh$

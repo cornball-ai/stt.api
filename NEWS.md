@@ -1,3 +1,22 @@
+# stt.api 0.3.0.1
+
+* `stt()` results now carry the shape subtitle tooling expects, so they feed
+  `subtitles::whisper_to_srt()` and `subtitles::whisper_to_ass()` directly on
+  either route:
+
+  ```r
+  x <- stt.api::stt("video.mp4", response_format = "verbose_json")
+  subtitles::whisper_to_srt(x, "video.srt")
+  ```
+
+  (`verbose_json` matters on the API route, which returns segments only at
+  that granularity; the in-process route always returns segments.)
+
+  A result with segments gains a `data` frame of `from`/`to` timestamp strings
+  and `text`, and class `c("stt_result", "whisper_transcription")`. Additive:
+  `text`, `segments`, `words`, `raw` and the `call_record` attribute are
+  unchanged, and results without usable segments are returned as before.
+
 # stt.api 0.3.0
 
 * `stt()` gains a `source` axis ("auto", "api", "package"), mirroring

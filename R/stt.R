@@ -39,6 +39,16 @@
 #'     attribute.}
 #'   \item{raw}{The raw response from the backend.}
 #' }
+#' When the result has usable segments (\code{start}/\code{end}/\code{text}
+#' columns), it additionally carries the shape subtitle tooling expects: a
+#' \code{data} data.frame with \code{from}/\code{to} timestamp strings
+#' ("HH:MM:SS.mmm") and \code{text}, and class
+#' \code{c("stt_result", "whisper_transcription")}, so it feeds
+#' \code{subtitles::whisper_to_srt()} and \code{subtitles::whisper_to_ass()}
+#' directly. Note the API route returns segments only with
+#' \code{response_format = "verbose_json"}. Results without usable segments
+#' are plain lists, as before.
+#'
 #' The result also carries a \code{"call_record"} attribute (cornball_sidecar
 #' v1, as in xtx.api/tts.api): the resolved request, elapsed seconds, and a
 #' timestamp -- provenance that rides with the transcription when callers
@@ -90,6 +100,12 @@ stt <- function(file, model = NULL, language = NULL,
     } else {
         .via_whisper(file = file, model = model, language = language)
     }
+    # Both routes land here with the same normalized shape, so this is where
+    # the subtitle-tool shape goes on: the result feeds
+    # subtitles::whisper_to_srt()/whisper_to_ass() directly whether it came
+    # from the HTTP API or the in-process whisper package.
+    res <- .attach_subtitle_shape(res)
+
     # stt produces an R object, not a media file, so the call record rides as
     # an attribute (cornball_sidecar v1, as in xtx.api/tts.api); callers that
     # serialize the result keep its provenance with it.

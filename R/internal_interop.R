@@ -39,7 +39,11 @@
 # capture our objects when both packages are attached.
 .attach_subtitle_shape <- function(res) {
     segs <- res$segments
-    if (is.null(segs) || nrow(segs) == 0) {
+    # is.data.frame() before nrow(): nrow() on a plain list returns NULL,
+    # and `NULL == 0` is logical(0), which makes the guard itself error
+    # rather than fall through. Both routes produce NULL or a data.frame
+    # today, so this is a total-function guarantee, not a live bug fix.
+    if (is.null(segs) || !is.data.frame(segs) || nrow(segs) == 0) {
         return(res)
     }
     if (!all(c("start", "end", "text") %in% names(segs))) {

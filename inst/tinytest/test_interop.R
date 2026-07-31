@@ -78,6 +78,12 @@ odd <- mk()
 odd$segments <- data.frame(a = 1, b = 2)
 expect_identical(stt.api:::.attach_subtitle_shape(odd), odd)
 
+# A non-data.frame in $segments returns unchanged instead of erroring in the
+# guard (nrow() on a list is NULL, and `NULL == 0` is logical(0)).
+lst <- mk()
+lst$segments <- list(start = 0, end = 1, text = "a")
+expect_identical(stt.api:::.attach_subtitle_shape(lst), lst)
+
 # ---- the contract subtitles:: checks ----
 # subtitles::whisper_to_srt()/whisper_to_ass() do exactly two things with the
 # object: stopifnot(inherits(x, "whisper_transcription")), then read $data's

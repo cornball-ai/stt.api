@@ -21,8 +21,14 @@ jobs:
     steps:
       - uses: actions/checkout@v6
 
+      # backend must be an action INPUT, not `env: BACKEND:` -- the action
+      # runs `export BACKEND=${{ inputs.backend }}` before calling run.sh, so a
+      # workflow-level env is silently overwritten and CI stays green while
+      # still using bspm. Confirm via "Selecting 'rapt'" in the Ubuntu log.
       - name: Setup
         uses: eddelbuettel/github-actions/r-ci@master
+        with:
+          backend: RAPT
 
       - name: Dependencies
         run: ./run.sh install_all

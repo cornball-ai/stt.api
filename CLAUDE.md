@@ -39,15 +39,27 @@ options(stt.api_key = "sk-...")                    # API key
 options(stt.timeout = 120)                         # Request timeout (seconds)
 ```
 
-## Known Issues
+## Timing by route
 
-### Native whisper backend returns no segments
+Every route returns segments now. What differs is what you have to ask for.
 
-The native `whisper` R package (cornball-ai/whisper) currently returns only text, not word/segment timing. This means `result$segments` is NULL.
+| Route | Segments | Word timings |
+|---|---|---|
+| whisper in-process | always | always (`word_timestamps = TRUE` is passed for you) |
+| whisper `serve()` over HTTP | always | `response_format = "verbose_json"` |
+| OpenAI, `whisper-1` | `verbose_json` | `verbose_json` |
+| OpenAI, `gpt-4o-transcribe-diarize` | `diarized_json`, plus a `speaker` column | never; OpenAI does not offer them alongside diarization |
+| OpenAI, `gpt-4o-transcribe` and relatives | never | never; they accept `json` only |
 
-**Workaround**: Use `backend = "openai"` with `response_format = "verbose_json"` to get segment timing.
+Anything with usable segments also carries `$data` and class
+`c("stt_result", "whisper_transcription")`, so it feeds
+`subtitles::whisper_to_srt()` and `whisper_to_ass()` directly. Karaoke
+(`whisper_to_ass(karaoke = TRUE)`) needs the word timings, so pick a route
+from the right-hand column.
 
-**TODO**: Add segment timing to native whisper package. The underlying torch model supports this - need to extract token timestamps during decoding and convert to segment boundaries.
+(This section previously said the native whisper backend returned no
+segments at all, and pointed at OpenAI as the workaround. That stopped
+being true with whisper 0.4.1 and stt.api 0.3.0.)
 
 ## Before submitting to CRAN
 

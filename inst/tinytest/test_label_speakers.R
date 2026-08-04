@@ -48,14 +48,24 @@ expect_equal(
 expect_equal(label_speakers(mk(), sep = "\n")$data$text[1],
              "HOUSTON\nWe copy you down, Eagle.")
 
-# ---- partial matching leaves unlabelled lines alone ----
-# known_speakers matches best-effort, so a speaker can come back missing.
-# "NA: " on screen would be worse than no label.
+# ---- a segment with no speaker is left unlabelled ----
+# This is a response that omitted the field for a segment, or an object
+# assembled by hand. It is NOT what a partial known_speakers match looks
+# like: a speaker the provider cannot match to a reference keeps a generic
+# label, and gets labelled with it. Either way "NA: " on screen would be
+# worse than no label.
 
-partial <- label_speakers(mk(c("HOUSTON", NA)))
-expect_equal(partial$data$text,
+no_speaker_row <- label_speakers(mk(c("HOUSTON", NA)))
+expect_equal(no_speaker_row$data$text,
              c("HOUSTON: We copy you down, Eagle.",
                "The Eagle has landed."))
+
+# A generic label is a label: it gets used, not skipped. This is the shape a
+# real unmatched speaker arrives in.
+generic <- label_speakers(mk(c("HOUSTON", "B")))
+expect_equal(generic$data$text,
+             c("HOUSTON: We copy you down, Eagle.",
+               "B: The Eagle has landed."))
 
 empty <- label_speakers(mk(c("", "ARMSTRONG")))
 expect_equal(empty$data$text,

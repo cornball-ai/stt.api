@@ -33,5 +33,16 @@ jobs:
       - name: Dependencies
         run: ./run.sh install_all
 
+      # NOTE: CI checks out a clean tree, so this job can never see untracked
+      # scratch in a working tree -- that is what the mandatory LOCAL run of
+      # the same script catches. What CI adds is the allowlist drifting out of
+      # date, and GNU/BSD portability, which is why both matrix legs run it
+      # rather than just Linux.
+      - name: Validate tarball contents
+        run: bash tools/check_tarball.sh
+
+      - name: Validator self-test (negative cases)
+        run: bash tools/check_tarball_selftest.sh
+
       - name: Test
         run: ./run.sh run_tests

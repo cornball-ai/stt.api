@@ -12,3 +12,6 @@
 
 # r-ci writes this into the package root during CI setup
 ^run\.sh$
+
+# Development scripts, not part of the package
+^tools$

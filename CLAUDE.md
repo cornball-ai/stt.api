@@ -80,11 +80,16 @@ CI runs the same validator, but **CI cannot catch this class** -- it checks
 out a clean tree, so untracked local files do not exist there. The local run
 is the only thing that sees them.
 
-Also run win-builder before submitting, on both release and devel:
+Also run win-builder before submitting, on both release and devel. Two
+calls: `check_win_devel()` uploads once, and its `r_version` argument
+`match.arg()`s to `"devel"`, so the bare call covers devel only.
 
 ```r
-tinypkgr::check_win_devel()
+tinypkgr::check_win_devel(r_version = "devel")
+tinypkgr::check_win_devel(r_version = "release")
 ```
+
+Results arrive by email, one per upload, usually within 30 minutes.
 
 A local `R CMD check` is not a substitute. whisper 0.5.0 was clean on four
 environments and still came back from win-builder with `Status: 1 ERROR`,

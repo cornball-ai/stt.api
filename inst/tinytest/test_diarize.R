@@ -220,6 +220,30 @@ expect_error(
         known_speakers = c(A = ref_a)),
     "requires response_format = 'diarized_json'")
 
+# ---- prompt is incompatible with diarization ----
+# OpenAI answers this combination with HTTP 400 "Prompt is not supported for
+# diarization models", verified against the live endpoint. Caught locally so
+# it fails before the audio is uploaded rather than after.
+
+expect_error(
+    stt(f, response_format = "diarized_json", prompt = "Tranquility Base"),
+    "prompt is not supported")
+
+# Both at once still reports the prompt problem rather than dying somewhere
+# less obvious.
+expect_error(
+    stt(f, response_format = "diarized_json", prompt = "x",
+        known_speakers = c(A = ref_a)),
+    "prompt is not supported")
+
+# The restriction is specific to the diarizing format; prompt stays legal
+# everywhere else, so this must get past argument checking to the missing
+# endpoint instead.
+expect_error(
+    stt(f, response_format = "verbose_json", backend = "openai",
+        prompt = "Tranquility Base"),
+    "no API base URL is set")
+
 # ---- live: real two-speaker audio through OpenAI ----
 # Never during R CMD check, and only when a key is actually configured: this
 # spends money and needs the network. The bundled clip is 44s of the Apollo

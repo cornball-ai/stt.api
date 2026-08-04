@@ -69,9 +69,9 @@
     }
     nms <- names(x)
     if (is.null(nms) || any(is.na(nms)) || !all(nzchar(nms))) {
-        stop("known_speakers must be named; the names become the speaker ",
-             "labels in the result (e.g. c(agent = 'agent.wav')).",
-             call. = FALSE)
+        stop("known_speakers must be named; the names are the labels ",
+             "offered for the speakers matched to each reference ",
+             "(e.g. c(agent = 'agent.wav')).", call. = FALSE)
     }
     if (anyDuplicated(nms)) {
         stop("known_speakers names must be unique; duplicated: ",

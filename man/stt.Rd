@@ -49,7 +49,9 @@ reach a whisper \code{serve()} endpoint.}
 
 \item{prompt}{Optional text to guide the transcription. For API backend,
 this is passed as initial_prompt to help with spelling of names,
-acronyms, or domain-specific terms. Ignored for whisper backend.}
+acronyms, or domain-specific terms. Ignored for whisper backend, and an
+error with \code{response_format = "diarized_json"}: OpenAI does not
+accept a prompt for its diarizing models.}
 
 \item{chunking_strategy}{Optional chunking strategy passed to the API,
 e.g. "auto". Defaults to "auto" for

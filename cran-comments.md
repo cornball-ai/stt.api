@@ -32,9 +32,10 @@
   for none, since they accept `response_format = "json"` alone.
 
 - New `known_speakers` argument for that format: a named vector of short
-  per-speaker reference clips, whose names replace the provider's generic
-  speaker labels in the result. No new dependency; jsonlite was already
-  imported and provides the base64 encoding.
+  per-speaker reference clips, whose names are offered as labels for the
+  speakers the provider matches to them. Matching is best-effort, so
+  unmatched speakers keep a generic label. No new dependency; jsonlite was
+  already imported and provides the base64 encoding.
 
 - Segment parsing no longer discards an entire response over one malformed
   segment; the bad segment alone is dropped.

@@ -23,6 +23,10 @@
   result. And the new `chunking_strategy` argument defaults to `"auto"`
   here, which OpenAI requires for audio longer than 30 seconds.
 
+  `prompt` is rejected up front for this format. OpenAI answers the
+  combination with HTTP 400, "Prompt is not supported for diarization
+  models", so the check saves an upload rather than adding a restriction.
+
 * New `known_speakers` argument offers your own labels for the segments in
   place of the provider's generic ones. Pass a named vector of short
   reference clips, at most four, and matched segments come back under those

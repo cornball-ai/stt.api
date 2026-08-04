@@ -36,7 +36,9 @@
 #'   reach a whisper \code{serve()} endpoint.
 #' @param prompt Optional text to guide the transcription. For API backend,
 #'   this is passed as initial_prompt to help with spelling of names,
-#'   acronyms, or domain-specific terms. Ignored for whisper backend.
+#'   acronyms, or domain-specific terms. Ignored for whisper backend, and an
+#'   error with \code{response_format = "diarized_json"}: OpenAI does not
+#'   accept a prompt for its diarizing models.
 #' @param chunking_strategy Optional chunking strategy passed to the API,
 #'   e.g. "auto". Defaults to "auto" for
 #'   \code{response_format = "diarized_json"}, which OpenAI rejects for audio
@@ -149,6 +151,15 @@ stt <- function(file, model = NULL, language = NULL,
              "got '", response_format, "'.", call. = FALSE)
     }
     .validate_known_speakers(known_speakers)
+
+    # OpenAI rejects prompt outright for the diarizing models: HTTP 400
+    # "Prompt is not supported for diarization models". Caught here so the
+    # combination fails before the upload rather than after it.
+    if (!is.null(prompt) && response_format == "diarized_json") {
+        stop("prompt is not supported with response_format = ",
+             "'diarized_json'; OpenAI rejects it for the diarizing models.",
+             call. = FALSE)
+    }
 
     # Only OpenAI diarizes, so asking for diarized_json already names the
     # backend. Let the axis whose job is to pick, pick -- otherwise the

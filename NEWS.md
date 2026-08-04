@@ -69,6 +69,26 @@
   for no timing at all, since they accept only `response_format = "json"`.
   Self-hosted `whisper::serve()` endpoints are unaffected.
 
+* New `label_speakers()` folds the speaker labels into the caption text, so
+  they survive the trip to a subtitle file:
+
+  ```r
+  x <- stt("meeting.wav", model = "gpt-4o-transcribe-diarize",
+           response_format = "diarized_json")
+  subtitles::whisper_to_srt(label_speakers(x), "meeting.srt")
+  #> HOUSTON: We copy you down, Eagle.
+  #> ARMSTRONG: Tranquility Base here. The Eagle has landed.
+  ```
+
+  Diarization puts `speaker` on `segments`, but subtitle tools read `data`,
+  which is `from`/`to`/`text` — so the labels were dropped on the way to a
+  caption file and everyone wiring the two together wrote the same paste0.
+  Only `data$text` changes; `segments` keeps its own text and labels, and
+  the class and `call_record` ride through, so the result still feeds
+  `whisper_to_srt()` and `whisper_to_ass()` directly. `sep`, `prefix` and
+  `suffix` control the styling. Segments whose speaker came back unmatched
+  are left alone rather than labelled `NA`.
+
 * Segment parsing no longer discards a whole response over one bad segment.
   A segment missing `start`, `end` or `text` is dropped on its own; before,
   it collapsed every segment to `NULL`, because `data.frame(start = NULL,

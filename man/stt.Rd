@@ -3,11 +3,17 @@
 \alias{stt}
 \title{Speech to Text}
 \usage{
-stt(file, model = NULL, language = NULL,
-    response_format = c("json", "text", "verbose_json", "diarized_json"),
-    backend = c("auto", "whisper", "openai"),
-    source = c("auto", "api", "package"), prompt = NULL,
-    chunking_strategy = NULL, known_speakers = NULL)
+stt(
+  file,
+  model = NULL,
+  language = NULL,
+  response_format = c("json", "text", "verbose_json", "diarized_json"),
+  backend = c("auto", "whisper", "openai"),
+  source = c("auto", "api", "package"),
+  prompt = NULL,
+  chunking_strategy = NULL,
+  known_speakers = NULL
+)
 }
 \arguments{
 \item{file}{Path to the audio file to convert.}

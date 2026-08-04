@@ -1,4 +1,4 @@
-# stt.api 0.3.0.1
+# stt.api 0.3.1
 
 * New `response_format = "diarized_json"`: speaker-labelled transcription
   through OpenAI's `gpt-4o-transcribe-diarize`.

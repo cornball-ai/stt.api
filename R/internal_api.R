@@ -1,9 +1,10 @@
 #' MIME type for an audio file, from its extension
 #'
-#' Only the container types OpenAI accepts for speaker references. Deriving
-#' this from the extension rather than sniffing the file keeps the dependency
-#' list where it is; an unknown extension is an error rather than a guess,
-#' since a wrong MIME type fails server-side with a far less obvious message.
+#' Covers every container OpenAI accepts as transcription input, since a
+#' speaker reference may be in any of them. Deriving this from the extension
+#' rather than sniffing the file keeps the dependency list where it is; an
+#' unknown extension is an error rather than a guess, since a wrong MIME type
+#' fails server-side with a far less obvious message.
 #'
 #' @param path File path.
 #' @return A MIME type string.
@@ -12,6 +13,8 @@
     ext <- tolower(sub(".*\\.", "", basename(path)))
     mime <- switch(ext,
                    mp3 = "audio/mpeg",
+                   mpeg = "audio/mpeg",
+                   mpga = "audio/mpeg",
                    wav = "audio/wav",
                    m4a = "audio/mp4",
                    mp4 = "audio/mp4",
@@ -22,7 +25,7 @@
                    NULL)
     if (is.null(mime)) {
         stop("Cannot determine an audio MIME type for '", basename(path),
-             "'. Use one of: mp3, wav, m4a, mp4, flac, ogg, webm.",
+             "'. Use one of: flac, m4a, mp3, mp4, mpeg, mpga, ogg, wav, webm.",
              call. = FALSE)
     }
     mime

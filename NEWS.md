@@ -23,10 +23,10 @@
   result. And the new `chunking_strategy` argument defaults to `"auto"`
   here, which OpenAI requires for audio longer than 30 seconds.
 
-* New `known_speakers` argument puts your own labels on the segments
-  instead of the provider's generic ones. Pass a named vector of short
-  reference clips, at most four, and the names come back as
-  `segments$speaker`:
+* New `known_speakers` argument offers your own labels for the segments in
+  place of the provider's generic ones. Pass a named vector of short
+  reference clips, at most four, and matched segments come back under those
+  names:
 
   ```r
   audio <- system.file("audio", package = "stt.api")
@@ -39,6 +39,12 @@
   unique(x$segments$speaker)
   #> [1] "Houston"   "Armstrong"
   ```
+
+  Matching is best-effort. Speakers the model cannot match to a reference
+  keep a generic label, so a mixture is normal and worth checking for rather
+  than assuming. References also do not re-cut the segmentation: people the
+  model has already merged into one cluster, such as several voices sharing
+  a radio downlink, are not separated by naming them.
 
   Each clip should hold one speaker and run roughly 2 to 10 seconds. The
   files are read and sent inline, so the `call_record` keeps the paths
@@ -76,8 +82,9 @@
   subtitles::whisper_to_srt(x, "video.srt")
   ```
 
-  (`verbose_json` matters on the API route, which returns segments only at
-  that granularity; the in-process route always returns segments.)
+  (The response format matters on the API route, which returns segments only
+  for `verbose_json` and `diarized_json`; the in-process route always returns
+  segments.)
 
   A result with segments gains a `data` frame of `from`/`to` timestamp strings
   and `text`, and class `c("stt_result", "whisper_transcription")`. Additive:

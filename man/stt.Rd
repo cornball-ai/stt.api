@@ -58,13 +58,19 @@ longer than 30 seconds when the parameter is unset. NULL otherwise.}
 
 \item{known_speakers}{Optional named character vector of audio files, at
 most four, giving a short reference clip per speaker. The \emph{names}
-become the speaker labels in the result, replacing the provider's
-generic ones:
+are offered to the provider as labels: segments it matches to a
+reference come back named, so
 \code{known_speakers = c(agent = "agent.wav", caller = "caller.wav")}
-yields \code{segments$speaker} values of "agent" and "caller". Each
-clip should contain only that speaker and run roughly 2 to 10 seconds;
-the files are read and sent inline, so keep them short. Requires
-\code{response_format = "diarized_json"} and is an error otherwise.}
+can yield \code{segments$speaker} values of "agent" and "caller".
+Matching is best-effort and partial results are normal -- speakers it
+cannot match keep a generic label, so expect a mix, and check what came
+back rather than assuming. Nor does supplying references re-cut the
+segmentation: speakers the model has already merged into one cluster
+(several people on one radio downlink, say) are not thereby separated.
+Each clip should contain only that speaker and run roughly 2 to 10
+seconds; the files are read and sent inline, so keep them short.
+Requires \code{response_format = "diarized_json"} and is an error
+otherwise.}
 }
 \value{
 A list with components:
@@ -92,8 +98,8 @@ columns), it additionally carries the shape subtitle tooling expects: a
 \code{c("stt_result", "whisper_transcription")}, so it feeds
 \code{subtitles::whisper_to_srt()} and \code{subtitles::whisper_to_ass()}
 directly. Note the API route returns segments only with
-\code{response_format = "verbose_json"}. Results without usable segments
-are plain lists, as before.
+\code{response_format = "verbose_json"} or \code{"diarized_json"}.
+Results without usable segments are plain lists, as before.
 
 The result also carries a \code{"call_record"} attribute (cornball_sidecar
 v1, as in xtx.api/tts.api): the resolved request, elapsed seconds, and a

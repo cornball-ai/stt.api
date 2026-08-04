@@ -116,6 +116,21 @@ expect_error(
     stt(f, response_format = "diarized_json", backend = "whisper"),
     "requires backend = 'openai'")
 
+# ...and that error must not depend on whisper being installed. Route
+# resolution also decides availability, so checking the resolved route
+# instead of the argument raised "package is not installed" first on any
+# machine without whisper -- green locally, red on CI. Stubbing the
+# availability probe pins the ordering.
+local({
+    orig <- stt.api:::.has_whisper
+    assignInNamespace(".has_whisper", function() FALSE, ns = "stt.api")
+    on.exit(assignInNamespace(".has_whisper", orig, ns = "stt.api"),
+            add = TRUE)
+    expect_error(
+        stt(f, response_format = "diarized_json", backend = "whisper"),
+        "requires backend = 'openai'")
+})
+
 # backend = "auto" resolves to openai rather than to in-process whisper, so
 # with no base URL set the failure is the missing endpoint, not the backend.
 expect_error(
@@ -144,6 +159,17 @@ expect_equal(stt.api:::.audio_mime("a.m4a"), "audio/mp4")
 expect_equal(stt.api:::.audio_mime("/tmp/x/a.flac"), "audio/flac")
 expect_error(stt.api:::.audio_mime("a.aiff"), "Cannot determine an audio MIME")
 expect_error(stt.api:::.audio_mime("noextension"), "Cannot determine an audio MIME")
+
+# Every container OpenAI accepts as transcription input is accepted here,
+# since a reference clip may be in any of them. mpeg and mpga are easy to
+# miss because no common encoder writes those extensions by default.
+for (e in c("flac", "m4a", "mp3", "mp4", "mpeg", "mpga", "ogg", "wav",
+            "webm")) {
+    expect_true(is.character(stt.api:::.audio_mime(paste0("a.", e))),
+                info = e)
+}
+expect_equal(stt.api:::.audio_mime("a.mpga"), "audio/mpeg")
+expect_equal(stt.api:::.audio_mime("a.mpeg"), "audio/mpeg")
 
 # The reference clip goes inline as a data URI, not as a file part.
 uri <- stt.api:::.audio_data_uri(ref_a)
@@ -262,11 +288,13 @@ if (at_home() && nzchar(key) && nzchar(clip)) {
 if (at_home() && nzchar(key) && nzchar(clip) && !inherits(named, "error")) {
     got <- unique(named$segments$speaker)
 
-    # The contract under test is that our names went out and came back, not
-    # that the model assigns every segment correctly. Asserting a subset
-    # keeps this from going red over one debatable attribution.
+    # The contract under test is that our names went out and were used, not
+    # that every speaker gets matched. Matching is best-effort: unmatched
+    # speakers keep a generic label, so requiring every label to be one of
+    # ours would go red on a partial match, which is documented behaviour
+    # rather than a defect.
     expect_true(length(got) > 0)
-    expect_true(all(got %in% names(speakers)))
+    expect_true(any(got %in% names(speakers)))
 
     # Paths, not the encoded clips, in the provenance record.
     expect_equal(attr(named, "call_record")$request$known_speakers, speakers)

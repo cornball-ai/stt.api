@@ -43,13 +43,19 @@
 #'   longer than 30 seconds when the parameter is unset. NULL otherwise.
 #' @param known_speakers Optional named character vector of audio files, at
 #'   most four, giving a short reference clip per speaker. The \emph{names}
-#'   become the speaker labels in the result, replacing the provider's
-#'   generic ones:
+#'   are offered to the provider as labels: segments it matches to a
+#'   reference come back named, so
 #'   \code{known_speakers = c(agent = "agent.wav", caller = "caller.wav")}
-#'   yields \code{segments$speaker} values of "agent" and "caller". Each
-#'   clip should contain only that speaker and run roughly 2 to 10 seconds;
-#'   the files are read and sent inline, so keep them short. Requires
-#'   \code{response_format = "diarized_json"} and is an error otherwise.
+#'   can yield \code{segments$speaker} values of "agent" and "caller".
+#'   Matching is best-effort and partial results are normal -- speakers it
+#'   cannot match keep a generic label, so expect a mix, and check what came
+#'   back rather than assuming. Nor does supplying references re-cut the
+#'   segmentation: speakers the model has already merged into one cluster
+#'   (several people on one radio downlink, say) are not thereby separated.
+#'   Each clip should contain only that speaker and run roughly 2 to 10
+#'   seconds; the files are read and sent inline, so keep them short.
+#'   Requires \code{response_format = "diarized_json"} and is an error
+#'   otherwise.
 #'
 #' @return A list with components:
 #' \describe{
@@ -76,8 +82,8 @@
 #' \code{c("stt_result", "whisper_transcription")}, so it feeds
 #' \code{subtitles::whisper_to_srt()} and \code{subtitles::whisper_to_ass()}
 #' directly. Note the API route returns segments only with
-#' \code{response_format = "verbose_json"}. Results without usable segments
-#' are plain lists, as before.
+#' \code{response_format = "verbose_json"} or \code{"diarized_json"}.
+#' Results without usable segments are plain lists, as before.
 #'
 #' The result also carries a \code{"call_record"} attribute (cornball_sidecar
 #' v1, as in xtx.api/tts.api): the resolved request, elapsed seconds, and a
@@ -151,6 +157,24 @@ stt <- function(file, model = NULL, language = NULL,
         backend <- "openai"
     }
 
+    # response_format is advisory for whisper -- the R object is the same
+    # whichever you ask for -- so it is ignored there. diarized_json is the
+    # exception: it asks for speaker labels no whisper build produces, so
+    # silently ignoring it would hand back a result missing the one thing the
+    # caller wanted. An explicit backend = "whisper" therefore fails here.
+    #
+    # Checked against `backend`, before .resolve_route(), and not against the
+    # resolved route afterwards. Route resolution also decides availability,
+    # so on a machine without whisper installed it raises "package is not
+    # installed" first -- turning an incompatible-argument error into an
+    # environment-dependent one. Which argument combinations are legal cannot
+    # depend on what happens to be installed.
+    if (response_format == "diarized_json" && backend != "openai") {
+        stop("response_format = 'diarized_json' requires backend = 'openai' ",
+             "(only OpenAI's models diarize); got backend = '", backend, "'.",
+             call. = FALSE)
+    }
+
     # Resolved here, not in .via_api(), so the call_record below reports the
     # value actually sent. OpenAI rejects diarized_json on audio longer than
     # 30s when chunking_strategy is unset.
@@ -160,17 +184,6 @@ stt <- function(file, model = NULL, language = NULL,
 
     # Resolve the engine and where it runs (in-process package vs HTTP API)
     route <- .resolve_route(backend, source)
-
-    # response_format is advisory for whisper -- the R object is the same
-    # whichever you ask for -- so it is ignored there. diarized_json is the
-    # exception: it asks for speaker labels no whisper build produces, so
-    # silently ignoring it would hand back a result missing the one thing the
-    # caller wanted. An explicit backend = "whisper" therefore fails here.
-    if (response_format == "diarized_json" && route$backend != "openai") {
-        stop("response_format = 'diarized_json' requires backend = 'openai' ",
-             "(only OpenAI's models diarize); resolved backend was '",
-             route$backend, "'.", call. = FALSE)
-    }
 
     # Dispatch to appropriate route
     started <- Sys.time()

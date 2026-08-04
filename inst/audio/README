@@ -22,7 +22,13 @@ Several people speak: Armstrong and Aldrin in the LM, Duke in Houston, and
 other controllers on the loop. Diarization returns fewer labels than there
 are people, because everyone in the LM shares one downlink and everyone in
 Houston shares another, so the split it can hear is by radio side rather
-than by person. Supply known_speakers if you want labels per person.
+than by person.
+
+known_speakers renames those clusters; it does not re-cut them. Supplying
+an Armstrong reference labels the LM side "Armstrong" rather than splitting
+Armstrong from Aldrin, since they arrive on one channel and the model has
+already merged them. Naming is best-effort besides: anything it cannot
+match to a reference keeps a generic label.
 
 Why this clip. Two properties make it a working diarization fixture, and
 both were arrived at the hard way:

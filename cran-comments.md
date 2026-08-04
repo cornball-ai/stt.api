@@ -4,19 +4,54 @@
 
 ## Test environments
 
-* local Ubuntu 24.04, R 4.6.0
+* local Ubuntu 24.04, R 4.6.1
 * GitHub Actions: ubuntu-latest, macos-latest
 * local Windows, R 4.6.0
 * local Windows, R-devel (4.7.0 pre-release)
 
-## Changes since last CRAN release (0.2.1)
+## Changes since last CRAN release (0.3.0)
 
-- `stt()` gains a `source` axis ("auto", "api", "package") to choose where a
-  backend runs (in-process vs HTTP), defaulting to the previous behavior.
-- The API backend requests and parses word-level timestamps for
-  `verbose_json` (`result$words`), matching the native whisper backend.
-- `stt()` results now carry a `"call_record"` attribute (resolved request,
-  backend/source used, elapsed seconds, timestamp) for provenance.
+- `stt()` results now carry the shape subtitle tooling expects, so they feed
+  `subtitles::whisper_to_srt()` and `whisper_to_ass()` directly. A result with
+  usable segments gains a `data` frame of `from`/`to` timestamp strings and
+  `text`, and class `c("stt_result", "whisper_transcription")`. The change is
+  additive: `text`, `segments`, `words`, `raw` and the `call_record` attribute
+  are unchanged, and results without usable segments are returned exactly as
+  before. No new dependency: the coupling is a data shape, so the tests assert
+  the contract directly rather than importing `subtitles`.
+
+- New `response_format = "diarized_json"`, giving speaker-labelled
+  transcription through OpenAI's diarizing model. Segments gain a `speaker`
+  column for that format only. A new `chunking_strategy` argument defaults
+  to "auto" for diarizing requests, which the API requires above 30 seconds
+  of audio, and `prompt` is refused for them, which the API also requires.
+  Both rules follow the model rather than the response format, as does
+  backend selection. Verified against the live endpoint.
+
+- `stt()`'s `model` documentation now records which model yields which
+  timing from OpenAI: "whisper-1" for word-level, "gpt-4o-transcribe-diarize"
+  for speaker-labelled segments, and the plain gpt-4o transcription models
+  for none, since they accept `response_format = "json"` alone.
+
+- New `known_speakers` argument for that format: a named vector of short
+  per-speaker reference clips, whose names are offered as labels for the
+  speakers the provider matches to them. Matching is best-effort, so
+  unmatched speakers keep a generic label. No new dependency; jsonlite was
+  already imported and provides the base64 encoding.
+
+- Segment parsing no longer discards an entire response over one malformed
+  segment; the bad segment alone is dropped.
+
+- Public domain audio is bundled in `inst/audio` for exercising diarization
+  (Apollo 11 landing, a work of the US Government; provenance in
+  `inst/audio/README`): a 44-second clip plus two short per-speaker
+  reference clips, around 220 KB in total. The tests that use them are gated
+  on both `at_home()` and a configured API key, so they never run during
+  checks.
+
+- The copyright holder is recorded as `cornball.ai`, the registered entity,
+  in both `DESCRIPTION` and `LICENSE`. It previously read "Cornball AI",
+  which is not the legal name.
 
 ## Reverse dependencies
 

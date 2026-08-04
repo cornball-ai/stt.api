@@ -1,3 +1,94 @@
+#' MIME type for an audio file, from its extension
+#'
+#' Only the container types OpenAI accepts for speaker references. Deriving
+#' this from the extension rather than sniffing the file keeps the dependency
+#' list where it is; an unknown extension is an error rather than a guess,
+#' since a wrong MIME type fails server-side with a far less obvious message.
+#'
+#' @param path File path.
+#' @return A MIME type string.
+#' @keywords internal
+.audio_mime <- function(path) {
+    ext <- tolower(sub(".*\\.", "", basename(path)))
+    mime <- switch(ext,
+                   mp3 = "audio/mpeg",
+                   wav = "audio/wav",
+                   m4a = "audio/mp4",
+                   mp4 = "audio/mp4",
+                   flac = "audio/flac",
+                   ogg = "audio/ogg",
+                   oga = "audio/ogg",
+                   webm = "audio/webm",
+                   NULL)
+    if (is.null(mime)) {
+        stop("Cannot determine an audio MIME type for '", basename(path),
+             "'. Use one of: mp3, wav, m4a, mp4, flac, ogg, webm.",
+             call. = FALSE)
+    }
+    mime
+}
+
+#' Encode an audio file as a data URI
+#'
+#' The speaker-reference fields take the clip inline as
+#' \code{data:<mime>;base64,<...>} rather than as a file part, so the bytes
+#' are read and encoded here. jsonlite is already an import, so this adds no
+#' dependency despite having nothing to do with JSON.
+#'
+#' @param path Path to an audio file.
+#' @return A data URI string.
+#' @keywords internal
+.audio_data_uri <- function(path) {
+    if (!file.exists(path)) {
+        stop("Speaker reference file not found: ", path, call. = FALSE)
+    }
+    raw <- readBin(path, "raw", n = file.size(path))
+    # jsonlite::base64_enc() emits MIME-style base64, hard-wrapped at 72
+    # columns. A data URI must be one unbroken run, and the embedded newlines
+    # get the whole field rejected server-side with "Known speaker references
+    # must be base64-encoded audio data", which does not point at whitespace.
+    b64 <- gsub("[\r\n]", "", jsonlite::base64_enc(raw))
+    paste0("data:", .audio_mime(path), ";base64,", b64)
+}
+
+#' Validate the known_speakers argument
+#'
+#' @param x A named character vector of audio file paths, or NULL.
+#' @return \code{x}, invisibly, or an error.
+#' @keywords internal
+.validate_known_speakers <- function(x) {
+    if (is.null(x) || length(x) == 0) {
+        return(invisible(NULL))
+    }
+    if (!is.character(x)) {
+        stop("known_speakers must be a character vector of audio file paths.",
+             call. = FALSE)
+    }
+    nms <- names(x)
+    if (is.null(nms) || any(is.na(nms)) || !all(nzchar(nms))) {
+        stop("known_speakers must be named; the names become the speaker ",
+             "labels in the result (e.g. c(agent = 'agent.wav')).",
+             call. = FALSE)
+    }
+    if (anyDuplicated(nms)) {
+        stop("known_speakers names must be unique; duplicated: ",
+             paste(unique(nms[duplicated(nms)]), collapse = ", "),
+             call. = FALSE)
+    }
+    # OpenAI's cap. Checked here so the failure names the limit rather than
+    # arriving as a generic 400.
+    if (length(x) > 4L) {
+        stop("At most 4 known speakers are supported; got ", length(x), ".",
+             call. = FALSE)
+    }
+    missing <- x[!file.exists(x)]
+    if (length(missing) > 0) {
+        stop("Speaker reference file(s) not found: ",
+             paste(missing, collapse = ", "), call. = FALSE)
+    }
+    invisible(x)
+}
+
 #' Build the segments data.frame from a parsed API response
 #'
 #' Shared by the timestamped formats. verbose_json segments carry
@@ -57,7 +148,7 @@
 # Internal: Transcribe via OpenAI-compatible API
 .via_api <- function(file, model = NULL, language = NULL,
                      response_format = "json", prompt = NULL,
-                     chunking_strategy = NULL) {
+                     chunking_strategy = NULL, known_speakers = NULL) {
     base_url <- .get_api_base(required = TRUE)
     api_key <- .get_api_key()
     timeout <- .get_timeout()
@@ -100,6 +191,18 @@
     # the default, so that what the call_record reports is what went out.
     if (!is.null(chunking_strategy)) {
         form_data$chunking_strategy <- chunking_strategy
+    }
+
+    # Named speakers: the names go out as one repeated field and the encoded
+    # reference clips as another, paired by position -- same array-style
+    # convention as timestamp_granularities[] above. Segments then come back
+    # labelled with these names instead of the provider's generic ones.
+    if (length(known_speakers) > 0) {
+        nms <- as.list(names(known_speakers))
+        names(nms) <- rep("known_speaker_names[]", length(nms))
+        refs <- lapply(unname(known_speakers), .audio_data_uri)
+        names(refs) <- rep("known_speaker_references[]", length(refs))
+        form_data <- c(form_data, nms, refs)
     }
 
     # Build headers (curl expects "Name: Value" format)

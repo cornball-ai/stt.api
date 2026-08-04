@@ -1,22 +1,28 @@
-twospeaker.mp3
---------------
+Audio bundled with stt.api, for exercising speaker diarization
+(response_format = "diarized_json"). All of it is public domain: works of
+the United States Government carry no copyright.
 
-44 seconds of two-speaker audio, for exercising speaker diarization
-(response_format = "diarized_json").
+Source for every file here: NASA's own Apollo 11 highlights reel,
+distributed by the Internet Archive as item NasaAudioHighlightReels, file
+Apollo11Highlights.mp3. Re-encoded to mono 16 kHz, 32 kbps.
 
-Content: Apollo 11 lunar landing, 20 July 1969, running 102:45:33 to
-102:46:17 GET. It opens on Charlie Duke's "30 seconds" fuel callout, then
-"Contact light" and the engine-stop checklist from the LM, Duke's "We copy
-you down, Eagle", Neil Armstrong's "Tranquility Base here, the Eagle has
-landed", and Duke's reply: "Roger, Tranquility. We copy you on the ground.
-You got a bunch of guys about to turn blue. We're breathing again. Thanks
-a lot."
 
-Source: NASA's own Apollo 11 highlights reel, distributed by the Internet
-Archive as item NasaAudioHighlightReels, file Apollo11Highlights.mp3.
-Re-encoded to mono 16 kHz, 32 kbps.
+EagleHasLanded.mp3
+------------------
 
-Public domain: works of the United States Government carry no copyright.
+44 seconds of the Apollo 11 lunar landing, 20 July 1969, running 102:45:33
+to 102:46:17 GET. It opens on Charlie Duke's "30 seconds" fuel callout,
+then "Contact light" and the engine-stop checklist from the LM, Duke's "We
+copy you down, Eagle", Neil Armstrong's "Tranquility Base here, the Eagle
+has landed", and Duke's reply: "Roger, Tranquility. We copy you on the
+ground. You got a bunch of guys about to turn blue. We're breathing again.
+Thanks a lot."
+
+Several people speak: Armstrong and Aldrin in the LM, Duke in Houston, and
+other controllers on the loop. Diarization returns fewer labels than there
+are people, because everyone in the LM shares one downlink and everyone in
+Houston shares another, so the split it can hear is by radio side rather
+than by person. Supply known_speakers if you want labels per person.
 
 Why this clip. Two properties make it a working diarization fixture, and
 both were arrived at the hard way:
@@ -24,11 +30,26 @@ both were arrived at the hard way:
   - Speakers get multi-second continuous turns. Diarization needs enough
     continuous speech per speaker to form an embedding; audio that trades
     one- and two-second lines (the descent callouts earlier in this same
-    reel, for instance) comes back labelled as a single speaker.
+    reel, for instance) comes back labelled as a single speaker no matter
+    how clean the recording is.
 
   - It runs past 30 seconds, which is the length above which OpenAI
     requires chunking_strategy for diarized_json. So the fixture covers
     that requirement rather than staying safely under it.
 
-Expect two speakers, not three. Aldrin and Armstrong share the LM downlink
-and come back as one label; Houston is the other.
+
+ref_armstrong.mp3, ref_houston.mp3
+----------------------------------
+
+Single-speaker reference clips cut from the same recording, for the
+known_speakers argument. Armstrong is 5.7 seconds ("Tranquility Base here,
+the Eagle has landed"); Houston is 6.5 seconds of Duke's reply. Both sit
+inside OpenAI's 2-to-10-second window for reference clips.
+
+  audio <- system.file("audio", package = "stt.api")
+  stt(file.path(audio, "EagleHasLanded.mp3"),
+      model = "gpt-4o-transcribe-diarize",
+      response_format = "diarized_json",
+      known_speakers = c(
+          Armstrong = file.path(audio, "ref_armstrong.mp3"),
+          Houston   = file.path(audio, "ref_houston.mp3")))

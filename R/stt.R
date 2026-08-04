@@ -41,6 +41,15 @@
 #'   e.g. "auto". Defaults to "auto" for
 #'   \code{response_format = "diarized_json"}, which OpenAI rejects for audio
 #'   longer than 30 seconds when the parameter is unset. NULL otherwise.
+#' @param known_speakers Optional named character vector of audio files, at
+#'   most four, giving a short reference clip per speaker. The \emph{names}
+#'   become the speaker labels in the result, replacing the provider's
+#'   generic ones:
+#'   \code{known_speakers = c(agent = "agent.wav", caller = "caller.wav")}
+#'   yields \code{segments$speaker} values of "agent" and "caller". Each
+#'   clip should contain only that speaker and run roughly 2 to 10 seconds;
+#'   the files are read and sent inline, so keep them short. Requires
+#'   \code{response_format = "diarized_json"} and is an error otherwise.
 #'
 #' @return A list with components:
 #' \describe{
@@ -88,6 +97,16 @@
 #'               response_format = "diarized_json")
 #' result$segments[, c("start", "end", "speaker", "text")]
 #'
+#' # ...with your own labels instead of generic ones
+#' audio <- system.file("audio", package = "stt.api")
+#' result <- stt(file.path(audio, "EagleHasLanded.mp3"),
+#'               model = "gpt-4o-transcribe-diarize",
+#'               response_format = "diarized_json",
+#'               known_speakers = c(
+#'                   Armstrong = file.path(audio, "ref_armstrong.mp3"),
+#'                   Houston   = file.path(audio, "ref_houston.mp3")))
+#' unique(result$segments$speaker)
+#'
 #' # Using a self-hosted whisper serve() endpoint
 #' set_stt_base("http://troy-g5:7809")
 #' result <- stt("speech.wav", backend = "whisper", source = "api")
@@ -102,7 +121,7 @@ stt <- function(file, model = NULL, language = NULL,
                                     "diarized_json"),
                 backend = c("auto", "whisper", "openai"),
                 source = c("auto", "api", "package"), prompt = NULL,
-                chunking_strategy = NULL) {
+                chunking_strategy = NULL, known_speakers = NULL) {
     # Validate file
     if (!file.exists(file)) {
         stop("File not found: ", file, call. = FALSE)
@@ -111,6 +130,19 @@ stt <- function(file, model = NULL, language = NULL,
     response_format <- match.arg(response_format)
     backend <- match.arg(backend)
     source <- match.arg(source)
+
+    # Argument validation before route resolution: whether known_speakers is
+    # well formed does not depend on which endpoint is configured, and a
+    # malformed call should say so rather than complain about a missing base
+    # URL first.
+    #
+    # Named speakers only mean anything to the diarizing format; silently
+    # ignoring them elsewhere would return generic labels with no hint why.
+    if (length(known_speakers) > 0 && response_format != "diarized_json") {
+        stop("known_speakers requires response_format = 'diarized_json'; ",
+             "got '", response_format, "'.", call. = FALSE)
+    }
+    .validate_known_speakers(known_speakers)
 
     # Only OpenAI diarizes, so asking for diarized_json already names the
     # backend. Let the axis whose job is to pick, pick -- otherwise the
@@ -149,7 +181,8 @@ stt <- function(file, model = NULL, language = NULL,
                  language = language,
                  response_format = response_format,
                  prompt = prompt,
-                 chunking_strategy = chunking_strategy
+                 chunking_strategy = chunking_strategy,
+                 known_speakers = known_speakers
         )
     } else {
         .via_whisper(file = file, model = model, language = language)
@@ -173,7 +206,10 @@ stt <- function(file, model = NULL, language = NULL,
                               response_format = response_format,
                               backend = route$backend, source = route$route,
                               prompt = prompt,
-                              chunking_strategy = chunking_strategy)),
+                              chunking_strategy = chunking_strategy,
+                              # Paths, not the encoded clips: the record is
+                              # provenance, and the base64 would dwarf it.
+                              known_speakers = known_speakers)),
         elapsed = round(as.numeric(difftime(Sys.time(), started,
             units = "secs")), 2),
         created = format(Sys.time(), "%Y-%m-%dT%H:%M:%S%z"))

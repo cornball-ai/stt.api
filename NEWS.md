@@ -23,6 +23,29 @@
   result. And the new `chunking_strategy` argument defaults to `"auto"`
   here, which OpenAI requires for audio longer than 30 seconds.
 
+* New `known_speakers` argument puts your own labels on the segments
+  instead of the provider's generic ones. Pass a named vector of short
+  reference clips, at most four, and the names come back as
+  `segments$speaker`:
+
+  ```r
+  audio <- system.file("audio", package = "stt.api")
+  x <- stt(file.path(audio, "EagleHasLanded.mp3"),
+           model = "gpt-4o-transcribe-diarize",
+           response_format = "diarized_json",
+           known_speakers = c(
+               Armstrong = file.path(audio, "ref_armstrong.mp3"),
+               Houston   = file.path(audio, "ref_houston.mp3")))
+  unique(x$segments$speaker)
+  #> [1] "Houston"   "Armstrong"
+  ```
+
+  Each clip should hold one speaker and run roughly 2 to 10 seconds. The
+  files are read and sent inline, so the `call_record` keeps the paths
+  rather than the encoded audio. Requires `diarized_json`, and says so
+  rather than quietly ignoring the argument. No new dependency: jsonlite
+  was already an import and does the base64.
+
 * `stt()`'s `model` documentation now spells out which model buys which
   timing from OpenAI: `whisper-1` for word-level (with `verbose_json`),
   `gpt-4o-transcribe-diarize` for speaker-labelled segments (with
@@ -38,11 +61,11 @@
   chooses its own segmentation, so the same audio parsed on one call and
   came back empty on the next.
 
-* A 44-second public domain clip ships at
-  `system.file("audio", "twospeaker.mp3", package = "stt.api")` for trying
-  diarization on: the Apollo 11 landing, LM crew and Houston. See
-  `inst/audio/README` for provenance and for why the clip is shaped the way
-  it is.
+* Public domain audio ships in `inst/audio` for trying diarization on: a
+  44-second clip of the Apollo 11 landing
+  (`system.file("audio", "EagleHasLanded.mp3", package = "stt.api")`), plus
+  two short per-speaker clips for `known_speakers`. See `inst/audio/README`
+  for provenance and for why the main clip is shaped the way it is.
 
 * `stt()` results now carry the shape subtitle tooling expects, so they feed
   `subtitles::whisper_to_srt()` and `subtitles::whisper_to_ass()` directly on

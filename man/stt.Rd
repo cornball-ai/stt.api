@@ -7,7 +7,7 @@ stt(file, model = NULL, language = NULL,
     response_format = c("json", "text", "verbose_json", "diarized_json"),
     backend = c("auto", "whisper", "openai"),
     source = c("auto", "api", "package"), prompt = NULL,
-    chunking_strategy = NULL)
+    chunking_strategy = NULL, known_speakers = NULL)
 }
 \arguments{
 \item{file}{Path to the audio file to convert.}
@@ -55,6 +55,16 @@ acronyms, or domain-specific terms. Ignored for whisper backend.}
 e.g. "auto". Defaults to "auto" for
 \code{response_format = "diarized_json"}, which OpenAI rejects for audio
 longer than 30 seconds when the parameter is unset. NULL otherwise.}
+
+\item{known_speakers}{Optional named character vector of audio files, at
+most four, giving a short reference clip per speaker. The \emph{names}
+become the speaker labels in the result, replacing the provider's
+generic ones:
+\code{known_speakers = c(agent = "agent.wav", caller = "caller.wav")}
+yields \code{segments$speaker} values of "agent" and "caller". Each
+clip should contain only that speaker and run roughly 2 to 10 seconds;
+the files are read and sent inline, so keep them short. Requires
+\code{response_format = "diarized_json"} and is an error otherwise.}
 }
 \value{
 A list with components:
@@ -106,6 +116,16 @@ result$text
 result <- stt("meeting.wav", model = "gpt-4o-transcribe-diarize",
               response_format = "diarized_json")
 result$segments[, c("start", "end", "speaker", "text")]
+
+# ...with your own labels instead of generic ones
+audio <- system.file("audio", package = "stt.api")
+result <- stt(file.path(audio, "EagleHasLanded.mp3"),
+              model = "gpt-4o-transcribe-diarize",
+              response_format = "diarized_json",
+              known_speakers = c(
+                  Armstrong = file.path(audio, "ref_armstrong.mp3"),
+                  Houston   = file.path(audio, "ref_houston.mp3")))
+unique(result$segments$speaker)
 
 # Using a self-hosted whisper serve() endpoint
 set_stt_base("http://troy-g5:7809")

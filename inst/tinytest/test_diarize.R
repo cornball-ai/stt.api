@@ -127,6 +127,73 @@ expect_true("diarized_json" %in% eval(formals(stt)$response_format))
 
 options(old)
 
+# ---- known_speakers: encoding and validation, all offline ----
+
+audio <- system.file("audio", package = "stt.api")
+ref_a <- file.path(audio, "ref_armstrong.mp3")
+ref_h <- file.path(audio, "ref_houston.mp3")
+
+expect_true(file.exists(ref_a))
+expect_true(file.exists(ref_h))
+
+# MIME comes off the extension; an unknown container is an error rather than
+# a guess, because a wrong type fails server-side with a worse message.
+expect_equal(stt.api:::.audio_mime("a.mp3"), "audio/mpeg")
+expect_equal(stt.api:::.audio_mime("a.WAV"), "audio/wav")
+expect_equal(stt.api:::.audio_mime("a.m4a"), "audio/mp4")
+expect_equal(stt.api:::.audio_mime("/tmp/x/a.flac"), "audio/flac")
+expect_error(stt.api:::.audio_mime("a.aiff"), "Cannot determine an audio MIME")
+expect_error(stt.api:::.audio_mime("noextension"), "Cannot determine an audio MIME")
+
+# The reference clip goes inline as a data URI, not as a file part.
+uri <- stt.api:::.audio_data_uri(ref_a)
+expect_true(is.character(uri))
+expect_equal(length(uri), 1L)
+expect_true(startsWith(uri, "data:audio/mpeg;base64,"))
+
+# Round-trips to the original bytes: the payload is the file, not a summary.
+b64 <- sub("^data:audio/mpeg;base64,", "", uri)
+expect_equal(jsonlite::base64_dec(b64),
+             readBin(ref_a, "raw", n = file.size(ref_a)))
+
+# One unbroken run, no whitespace. jsonlite::base64_enc() hard-wraps at 72
+# columns by default, and those newlines get the field rejected server-side
+# with a message that says nothing about whitespace.
+expect_false(grepl("[[:space:]]", uri))
+
+expect_error(stt.api:::.audio_data_uri(file.path(audio, "nope.mp3")),
+             "Speaker reference file not found")
+
+# ---- known_speakers validation ----
+
+expect_null(stt.api:::.validate_known_speakers(NULL))
+expect_null(stt.api:::.validate_known_speakers(character(0)))
+expect_silent(stt.api:::.validate_known_speakers(c(A = ref_a, B = ref_h)))
+
+expect_error(stt.api:::.validate_known_speakers(c(ref_a, ref_h)),
+             "must be named")
+expect_error(stt.api:::.validate_known_speakers(setNames(ref_a, "")),
+             "must be named")
+expect_error(stt.api:::.validate_known_speakers(c(A = ref_a, A = ref_h)),
+             "must be unique")
+expect_error(stt.api:::.validate_known_speakers(list(A = ref_a)),
+             "character vector")
+
+# OpenAI caps this at four; the error names the limit rather than arriving
+# as a generic 400.
+five <- setNames(rep(ref_a, 5), LETTERS[1:5])
+expect_error(stt.api:::.validate_known_speakers(five), "At most 4")
+
+expect_error(stt.api:::.validate_known_speakers(c(A = "/nonexistent/x.mp3")),
+             "not found")
+
+# Named speakers are meaningless outside the diarizing format, and silently
+# ignoring them would return generic labels with no hint why.
+expect_error(
+    stt(f, response_format = "verbose_json", backend = "openai",
+        known_speakers = c(A = ref_a)),
+    "requires response_format = 'diarized_json'")
+
 # ---- live: real two-speaker audio through OpenAI ----
 # Never during R CMD check, and only when a key is actually configured: this
 # spends money and needs the network. The bundled clip is 44s of the Apollo
@@ -135,7 +202,7 @@ options(old)
 # chunking_strategy for this format.
 
 key <- Sys.getenv("OPENAI_API_KEY")
-clip <- system.file("audio", "twospeaker.mp3", package = "stt.api")
+clip <- system.file("audio", "EagleHasLanded.mp3", package = "stt.api")
 
 if (at_home() && nzchar(key) && nzchar(clip)) {
     old_live <- options(stt.api_base = "https://api.openai.com",
@@ -174,4 +241,33 @@ if (at_home() && nzchar(key) && nzchar(clip) && !inherits(live, "error")) {
 
     # The record reports the chunking strategy actually sent.
     expect_equal(attr(live, "call_record")$request$chunking_strategy, "auto")
+}
+
+# ---- live: known_speakers replaces the generic labels ----
+
+if (at_home() && nzchar(key) && nzchar(clip)) {
+    speakers <- c(Armstrong = ref_a, Houston = ref_h)
+
+    old_named <- options(stt.api_base = "https://api.openai.com",
+                         stt.api_key = key, stt.timeout = 300)
+    named <- tryCatch(stt(clip, model = "gpt-4o-transcribe-diarize",
+                          response_format = "diarized_json",
+                          known_speakers = speakers),
+                      error = function(e) e)
+    options(old_named)
+
+    expect_false(inherits(named, "error"))
+}
+
+if (at_home() && nzchar(key) && nzchar(clip) && !inherits(named, "error")) {
+    got <- unique(named$segments$speaker)
+
+    # The contract under test is that our names went out and came back, not
+    # that the model assigns every segment correctly. Asserting a subset
+    # keeps this from going red over one debatable attribution.
+    expect_true(length(got) > 0)
+    expect_true(all(got %in% names(speakers)))
+
+    # Paths, not the encoded clips, in the provenance record.
+    expect_equal(attr(named, "call_record")$request$known_speakers, speakers)
 }

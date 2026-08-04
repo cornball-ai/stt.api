@@ -31,13 +31,20 @@
   for speaker-labelled segments, and the plain gpt-4o transcription models
   for none, since they accept `response_format = "json"` alone.
 
+- New `known_speakers` argument for that format: a named vector of short
+  per-speaker reference clips, whose names replace the provider's generic
+  speaker labels in the result. No new dependency; jsonlite was already
+  imported and provides the base64 encoding.
+
 - Segment parsing no longer discards an entire response over one malformed
   segment; the bad segment alone is dropped.
 
-- A 44-second public domain audio clip is bundled in `inst/audio` for
-  exercising diarization (Apollo 11 landing, a work of the US Government;
-  provenance in `inst/audio/README`). The test that uses it is gated on both
-  `at_home()` and a configured API key, so it never runs during checks.
+- Public domain audio is bundled in `inst/audio` for exercising diarization
+  (Apollo 11 landing, a work of the US Government; provenance in
+  `inst/audio/README`): a 44-second clip plus two short per-speaker
+  reference clips, around 220 KB in total. The tests that use them are gated
+  on both `at_home()` and a configured API key, so they never run during
+  checks.
 
 - The copyright holder is recorded as `cornball.ai`, the registered entity,
   in both `DESCRIPTION` and `LICENSE`. It previously read "Cornball AI",

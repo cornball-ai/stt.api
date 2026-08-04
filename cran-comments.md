@@ -6,6 +6,7 @@
 
 * local Ubuntu 24.04, R 4.6.1 -- Status: OK
 * win-builder, R-devel (2026-08-03 r90347 ucrt) -- Status: OK
+* win-builder, R-release 4.6.1 (2026-06-24 ucrt) -- Status: OK
 * GitHub Actions (r-ci): ubuntu-latest, macos-latest -- passing
 
 ## Changes since last CRAN release (0.3.0)

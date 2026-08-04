@@ -39,6 +39,10 @@
   unmatched speakers keep a generic label. No new dependency; jsonlite was
   already imported and provides the base64 encoding.
 
+- New exported `label_speakers()`, which folds diarized speaker labels into
+  the caption text so they survive into a subtitle file. Pure data
+  reshaping, no network.
+
 - Segment parsing no longer discards an entire response over one malformed
   segment; the bad segment alone is dropped.
 

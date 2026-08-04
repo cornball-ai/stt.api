@@ -137,6 +137,26 @@ expect_error(
     stt(f, response_format = "diarized_json"),
     "no API base URL is set")
 
+# Same for a diarizing model asked for plain json, which carries no
+# diarized_json anywhere. Keyed on the format instead of the model, this
+# stayed on "auto" and .resolve_route() picked whisper/package wherever
+# whisper happened to be installed -- dispatching an OpenAI model name to
+# the in-process engine. Stubbing availability both ways pins the routing
+# regardless of what the test machine has.
+for (installed in c(TRUE, FALSE)) {
+    local({
+        orig <- stt.api:::.has_whisper
+        assignInNamespace(".has_whisper", function() installed,
+                          ns = "stt.api")
+        on.exit(assignInNamespace(".has_whisper", orig, ns = "stt.api"),
+                add = TRUE)
+        expect_error(
+            stt(f, model = "gpt-4o-transcribe-diarize",
+                response_format = "json"),
+            "no API base URL is set", info = paste("whisper:", installed))
+    })
+}
+
 # The format is a real choice, not a typo caught by match.arg.
 expect_true("diarized_json" %in% eval(formals(stt)$response_format))
 
@@ -354,16 +374,21 @@ if (at_home() && nzchar(key) && nzchar(clip) && !inherits(named, "error")) {
 
 # ---- live: the diarizing model on plain json ----
 # Regression for a boundary that was drawn on the response format when the
-# rule is the model's. This call carries no diarized_json anywhere, so
-# nothing keyed on the format defaults chunking_strategy, and OpenAI answers
-# an unset one with HTTP 400 "chunking_strategy is required for diarization
-# models". If it succeeds, the default reached the wire.
+# rule is the model's. This call carries no diarized_json anywhere, so a
+# chunking default keyed on the format never fires; the bundled clip is 44s,
+# and OpenAI refuses a diarizing request over 30s with an unset
+# chunking_strategy ("chunking_strategy is required for diarization
+# models"). If it succeeds, the default reached the wire.
+#
+# backend is left at "auto" deliberately. Naming "openai" would mask the
+# routing half of the same bug, where a diarizing model on plain json stayed
+# on "auto" and resolved to in-process whisper.
 
 if (at_home() && nzchar(key) && nzchar(clip)) {
     old_pj <- options(stt.api_base = "https://api.openai.com",
                       stt.api_key = key, stt.timeout = 300)
     plainjson <- tryCatch(stt(clip, model = "gpt-4o-transcribe-diarize",
-                              response_format = "json", backend = "openai"),
+                              response_format = "json"),
                           error = function(e) e)
     options(old_pj)
 
@@ -375,4 +400,7 @@ if (at_home() && nzchar(key) && nzchar(clip) &&
     expect_true(nchar(plainjson$text) > 0)
     expect_equal(attr(plainjson, "call_record")$request$chunking_strategy,
                  "auto")
+    # Routed to OpenAI from backend = "auto", not to in-process whisper.
+    expect_equal(attr(plainjson, "call_record")$request$backend, "openai")
+    expect_equal(attr(plainjson, "call_record")$request$source, "api")
 }

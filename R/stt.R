@@ -43,9 +43,10 @@
 #' @param chunking_strategy Optional chunking strategy passed to the API,
 #'   e.g. "auto". Defaults to "auto" for any request to a diarizing model
 #'   (\code{response_format = "diarized_json"}, or a \code{model} whose name
-#'   says so), which OpenAI otherwise rejects: always for
-#'   \code{response_format = "json"}, and above 30 seconds of audio for
-#'   \code{diarized_json}. NULL otherwise.
+#'   says so), because OpenAI refuses those for audio longer than 30 seconds
+#'   when it is unset. The threshold is the audio duration, not the response
+#'   format. Defaulted regardless of length, since the duration is not known
+#'   without decoding the file. NULL for non-diarizing requests.
 #' @param known_speakers Optional named character vector of audio files, at
 #'   most four, giving a short reference clip per speaker. The \emph{names}
 #'   are offered to the provider as labels: segments it matches to a
@@ -168,16 +169,18 @@ stt <- function(file, model = NULL, language = NULL,
              call. = FALSE)
     }
 
-    # Only OpenAI diarizes, so asking for diarized_json already names the
-    # backend. Let the axis whose job is to pick, pick -- otherwise the
-    # default call resolves to in-process whisper and dies on the check below.
-    if (response_format == "diarized_json" && backend == "auto") {
+    # Only OpenAI diarizes, so a diarizing request already names the backend.
+    # Let the axis whose job is to pick, pick. Keyed on `diarizing` and not
+    # on the format: a diarizing model asked for plain json is still an
+    # OpenAI request, and leaving it on "auto" sent an OpenAI model name to
+    # in-process whisper on any machine that had whisper installed.
+    if (diarizing && backend == "auto") {
         backend <- "openai"
     }
 
     # response_format is advisory for whisper -- the R object is the same
-    # whichever you ask for -- so it is ignored there. diarized_json is the
-    # exception: it asks for speaker labels no whisper build produces, so
+    # whichever you ask for -- so it is ignored there. A diarizing request is
+    # the exception: it asks for speaker labels no whisper build produces, so
     # silently ignoring it would hand back a result missing the one thing the
     # caller wanted. An explicit backend = "whisper" therefore fails here.
     #
@@ -187,17 +190,19 @@ stt <- function(file, model = NULL, language = NULL,
     # installed" first -- turning an incompatible-argument error into an
     # environment-dependent one. Which argument combinations are legal cannot
     # depend on what happens to be installed.
-    if (response_format == "diarized_json" && backend != "openai") {
-        stop("response_format = 'diarized_json' requires backend = 'openai' ",
+    if (diarizing && backend != "openai") {
+        stop("a diarizing request requires backend = 'openai' ",
              "(only OpenAI's models diarize); got backend = '", backend, "'.",
              call. = FALSE)
     }
 
-    # HTTP 400: "chunking_strategy is required for diarization models" --
-    # unconditionally with response_format = "json", and above 30s of audio
-    # with diarized_json. Defaulted for every diarizing request rather than
-    # just the diarized_json ones, and resolved here rather than in
-    # .via_api() so the call_record below reports the value actually sent.
+    # HTTP 400: "chunking_strategy is required for diarization models", above
+    # 30s of audio. Measured, not assumed: with the parameter unset a 15s clip
+    # succeeds in both json and diarized_json, and a 44s clip is refused in
+    # both. So the threshold is the duration and the format does not enter
+    # into it. Defaulted for every diarizing request because the duration is
+    # not known here without decoding the audio, and resolved here rather
+    # than in .via_api() so the call_record reports the value actually sent.
     if (diarizing && is.null(chunking_strategy)) {
         chunking_strategy <- "auto"
     }

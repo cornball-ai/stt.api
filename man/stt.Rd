@@ -57,9 +57,10 @@ the model as well as on \code{diarized_json}.}
 \item{chunking_strategy}{Optional chunking strategy passed to the API,
 e.g. "auto". Defaults to "auto" for any request to a diarizing model
 (\code{response_format = "diarized_json"}, or a \code{model} whose name
-says so), which OpenAI otherwise rejects: always for
-\code{response_format = "json"}, and above 30 seconds of audio for
-\code{diarized_json}. NULL otherwise.}
+says so), because OpenAI refuses those for audio longer than 30 seconds
+when it is unset. The threshold is the audio duration, not the response
+format. Defaulted regardless of length, since the duration is not known
+without decoding the file. NULL for non-diarizing requests.}
 
 \item{known_speakers}{Optional named character vector of audio files, at
 most four, giving a short reference clip per speaker. The \emph{names}

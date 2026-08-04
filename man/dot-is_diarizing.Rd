@@ -14,14 +14,17 @@
 TRUE or FALSE.
 }
 \description{
-Two of OpenAI's rules key on the model rather than the response format:
-it requires \code{chunking_strategy} and refuses \code{prompt} for
-"diarization models", whichever format is asked for. Both were verified
-against the live endpoint with \code{response_format = "json"}:
+Several of OpenAI's rules key on the model rather than the response
+format, since a diarizing model also answers plain \code{json} and
+\code{text}. It refuses \code{prompt} for "diarization models" whichever
+format is asked for, requires \code{chunking_strategy} for them above 30
+seconds of audio in any format, and only OpenAI serves them at all, so a
+diarizing request also fixes the backend. Verified against the live
+endpoint with \code{response_format = "json"}:
 }
 \details{
-HTTP 400: chunking_strategy is required for diarization models
 HTTP 400: Prompt is not supported for diarization models
+HTTP 400: chunking_strategy is required for diarization models
 
 \code{diarized_json} implies a diarizing model, since nothing else
 produces it. Beyond that the only signal available before the request is

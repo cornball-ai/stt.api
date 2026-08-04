@@ -43,6 +43,14 @@ preserved -- the result still feeds
 \code{subtitles::whisper_to_srt()} and \code{whisper_to_ass()} directly.
 
 }
+\section{Karaoke}{
+Pass \code{karaoke = FALSE} to
+\code{subtitles::whisper_to_ass()} for a diarized result. That argument
+defaults to \code{TRUE} and needs word-level timings, which OpenAI does
+not return alongside diarization -- so the default errors on any diarized
+result, labelled or not. \code{whisper_to_srt()} is unaffected.
+
+}
 \examples{
 # The shape stt() returns for a diarized request.
 x <- structure(
@@ -61,6 +69,13 @@ x <- structure(
 
 label_speakers(x)$data$text
 label_speakers(x, prefix = "[", suffix = "]", sep = " ")$data$text
+
+\dontrun{
+# Into a caption file. karaoke = FALSE is required for diarized results.
+subtitles::whisper_to_srt(label_speakers(x), "meeting.srt")
+subtitles::whisper_to_ass(label_speakers(x), "meeting.ass",
+                          karaoke = FALSE)
+}
 
 }
 \seealso{

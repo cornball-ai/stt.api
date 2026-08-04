@@ -48,3 +48,33 @@ The native `whisper` R package (cornball-ai/whisper) currently returns only text
 **Workaround**: Use `backend = "openai"` with `response_format = "verbose_json"` to get segment timing.
 
 **TODO**: Add segment timing to native whisper package. The underlying torch model supports this - need to extract token timestamps during decoding and convert to segment boundaries.
+
+## Before submitting to CRAN
+
+Run this against the real working tree, every time:
+
+```bash
+bash tools/check_tarball.sh
+```
+
+`R CMD build` packages the working **directory**, not the git tree, and it
+does not skip arbitrary dot-directories -- only a fixed known set. So any
+untracked scratch left in the package root ships. This has already happened
+twice in sibling packages: a `git worktree add` left a full second copy of
+whisper inside whisper, and a temporary clone of an unrelated package in
+the subtitles root contributed 179 of 213 tarball entries.
+
+CI runs the same validator, but **CI cannot catch this class** -- it checks
+out a clean tree, so untracked local files do not exist there. The local run
+is the only thing that sees them.
+
+Also run win-builder before submitting, on both release and devel:
+
+```r
+tinypkgr::check_win_devel()
+```
+
+A local `R CMD check` is not a substitute. whisper 0.5.0 was clean on four
+environments and still came back from win-builder with `Status: 1 ERROR`,
+from a test that guarded on `requireNamespace("torch")` instead of
+`torch::torch_is_installed()`.

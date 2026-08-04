@@ -17,15 +17,25 @@
   ours. The result carries the usual `data` frame and class, so diarized
   output captions like any other.
 
-  Two conveniences come with it. `backend = "auto"` resolves straight to
-  `"openai"` for this format, since nothing else serves it; an explicit
-  `backend = "whisper"` is an error rather than a silently undiarized
-  result. And the new `chunking_strategy` argument defaults to `"auto"`
-  here, which OpenAI requires for audio longer than 30 seconds.
+  `backend = "auto"` resolves straight to `"openai"` for this format, since
+  nothing else serves it; an explicit `backend = "whisper"` is an error
+  rather than a silently undiarized result.
 
-  `prompt` is rejected up front for this format. OpenAI answers the
-  combination with HTTP 400, "Prompt is not supported for diarization
-  models", so the check saves an upload rather than adding a restriction.
+  Two further OpenAI rules key on the *model* rather than the response
+  format, and stt() now follows suit, since a diarizing model also answers
+  plain `json` and `text`:
+
+  - The new `chunking_strategy` argument defaults to `"auto"` for any
+    diarizing request. OpenAI rejects an unset one outright with
+    `response_format = "json"`, and above 30 seconds of audio with
+    `diarized_json`.
+  - `prompt` is refused up front, whichever format is asked for. OpenAI
+    answers the combination with HTTP 400, "Prompt is not supported for
+    diarization models", so the check saves an upload rather than adding a
+    restriction of ours.
+
+  A request counts as diarizing when the format is `diarized_json` or the
+  model name says so.
 
 * New `known_speakers` argument offers your own labels for the segments in
   place of the provider's generic ones. Pass a named vector of short

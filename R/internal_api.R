@@ -54,6 +54,34 @@
     paste0("data:", .audio_mime(path), ";base64,", b64)
 }
 
+#' Is this request headed for a diarizing model?
+#'
+#' Two of OpenAI's rules key on the model rather than the response format:
+#' it requires \code{chunking_strategy} and refuses \code{prompt} for
+#' "diarization models", whichever format is asked for. Both were verified
+#' against the live endpoint with \code{response_format = "json"}:
+#'
+#'   HTTP 400: chunking_strategy is required for diarization models
+#'   HTTP 400: Prompt is not supported for diarization models
+#'
+#' \code{diarized_json} implies a diarizing model, since nothing else
+#' produces it. Beyond that the only signal available before the request is
+#' the model name, so this matches on it. That is a heuristic: a self-hosted
+#' model whose name happens to contain "diarize" is treated as diarizing.
+#' The alternative is uploading the audio to be told the same thing.
+#'
+#' @param model Model name, or NULL.
+#' @param response_format The resolved response format.
+#' @return TRUE or FALSE.
+#' @keywords internal
+.is_diarizing <- function(model, response_format) {
+    if (identical(response_format, "diarized_json")) {
+        return(TRUE)
+    }
+    is.character(model) && length(model) == 1L && !is.na(model) &&
+        grepl("diarize", model, ignore.case = TRUE)
+}
+
 #' Validate the known_speakers argument
 #'
 #' @param x A named character vector of audio file paths, or NULL.

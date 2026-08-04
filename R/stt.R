@@ -37,12 +37,15 @@
 #' @param prompt Optional text to guide the transcription. For API backend,
 #'   this is passed as initial_prompt to help with spelling of names,
 #'   acronyms, or domain-specific terms. Ignored for whisper backend, and an
-#'   error with \code{response_format = "diarized_json"}: OpenAI does not
-#'   accept a prompt for its diarizing models.
+#'   error for a diarizing model: OpenAI refuses a prompt for those
+#'   whichever \code{response_format} is requested, so this is rejected on
+#'   the model as well as on \code{diarized_json}.
 #' @param chunking_strategy Optional chunking strategy passed to the API,
-#'   e.g. "auto". Defaults to "auto" for
-#'   \code{response_format = "diarized_json"}, which OpenAI rejects for audio
-#'   longer than 30 seconds when the parameter is unset. NULL otherwise.
+#'   e.g. "auto". Defaults to "auto" for any request to a diarizing model
+#'   (\code{response_format = "diarized_json"}, or a \code{model} whose name
+#'   says so), which OpenAI otherwise rejects: always for
+#'   \code{response_format = "json"}, and above 30 seconds of audio for
+#'   \code{diarized_json}. NULL otherwise.
 #' @param known_speakers Optional named character vector of audio files, at
 #'   most four, giving a short reference clip per speaker. The \emph{names}
 #'   are offered to the provider as labels: segments it matches to a
@@ -152,12 +155,16 @@ stt <- function(file, model = NULL, language = NULL,
     }
     .validate_known_speakers(known_speakers)
 
-    # OpenAI rejects prompt outright for the diarizing models: HTTP 400
-    # "Prompt is not supported for diarization models". Caught here so the
-    # combination fails before the upload rather than after it.
-    if (!is.null(prompt) && response_format == "diarized_json") {
-        stop("prompt is not supported with response_format = ",
-             "'diarized_json'; OpenAI rejects it for the diarizing models.",
+    # The next two rules key on the model, not the response format: OpenAI
+    # applies them to "diarization models" whichever format is requested, so
+    # gating on diarized_json alone leaves the plain-json case to fail after
+    # the upload instead of before it.
+    diarizing <- .is_diarizing(model, response_format)
+
+    # HTTP 400: "Prompt is not supported for diarization models".
+    if (!is.null(prompt) && diarizing) {
+        stop("prompt is not supported for diarizing models; OpenAI rejects ",
+             "the combination whichever response_format is used.",
              call. = FALSE)
     }
 
@@ -186,10 +193,12 @@ stt <- function(file, model = NULL, language = NULL,
              call. = FALSE)
     }
 
-    # Resolved here, not in .via_api(), so the call_record below reports the
-    # value actually sent. OpenAI rejects diarized_json on audio longer than
-    # 30s when chunking_strategy is unset.
-    if (response_format == "diarized_json" && is.null(chunking_strategy)) {
+    # HTTP 400: "chunking_strategy is required for diarization models" --
+    # unconditionally with response_format = "json", and above 30s of audio
+    # with diarized_json. Defaulted for every diarizing request rather than
+    # just the diarized_json ones, and resolved here rather than in
+    # .via_api() so the call_record below reports the value actually sent.
+    if (diarizing && is.null(chunking_strategy)) {
         chunking_strategy <- "auto"
     }
 

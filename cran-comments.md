@@ -22,9 +22,11 @@
 
 - New `response_format = "diarized_json"`, giving speaker-labelled
   transcription through OpenAI's diarizing model. Segments gain a `speaker`
-  column for that format only; a new `chunking_strategy` argument defaults to
-  "auto" there, which the API requires for audio over 30 seconds. Verified
-  against the live endpoint on the bundled 44-second clip.
+  column for that format only. A new `chunking_strategy` argument defaults
+  to "auto" for diarizing requests, which the API requires, and `prompt` is
+  refused for them, which the API also requires. Both rules key on the model
+  rather than the response format. Verified against the live endpoint on the
+  bundled 44-second clip.
 
 - `stt()`'s `model` documentation now records which model yields which
   timing from OpenAI: "whisper-1" for word-level, "gpt-4o-transcribe-diarize"

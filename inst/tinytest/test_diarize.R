@@ -220,13 +220,40 @@ expect_error(
         known_speakers = c(A = ref_a)),
     "requires response_format = 'diarized_json'")
 
-# ---- prompt is incompatible with diarization ----
-# OpenAI answers this combination with HTTP 400 "Prompt is not supported for
-# diarization models", verified against the live endpoint. Caught locally so
-# it fails before the audio is uploaded rather than after.
+# ---- diarizing-model detection ----
+# Two OpenAI rules key on the model rather than the response format, both
+# confirmed live with response_format = "json":
+#   HTTP 400: chunking_strategy is required for diarization models
+#   HTTP 400: Prompt is not supported for diarization models
+# So the predicate has to see the model, not just the format.
+
+isd <- stt.api:::.is_diarizing
+
+expect_true(isd("gpt-4o-transcribe-diarize", "json"))
+expect_true(isd("gpt-4o-transcribe-diarize", "text"))
+expect_true(isd("GPT-4O-TRANSCRIBE-DIARIZE", "json"))
+expect_true(isd(NULL, "diarized_json"))       # format alone implies it
+expect_true(isd("whisper-1", "diarized_json"))
+
+expect_false(isd("whisper-1", "json"))
+expect_false(isd("gpt-4o-transcribe", "verbose_json"))
+expect_false(isd(NULL, "json"))
+expect_false(isd(NA_character_, "json"))
+expect_false(isd(c("a", "b"), "json"))
+expect_false(isd(character(0), "json"))
+
+# ---- prompt is incompatible with diarizing models ----
+# Caught locally so the combination fails before the audio is uploaded.
 
 expect_error(
     stt(f, response_format = "diarized_json", prompt = "Tranquility Base"),
+    "prompt is not supported")
+
+# The case the format-only guard missed: the diarizing model also serves
+# plain json, and refuses prompt there too.
+expect_error(
+    stt(f, model = "gpt-4o-transcribe-diarize", response_format = "json",
+        backend = "openai", prompt = "Tranquility Base"),
     "prompt is not supported")
 
 # Both at once still reports the prompt problem rather than dying somewhere
@@ -236,12 +263,13 @@ expect_error(
         known_speakers = c(A = ref_a)),
     "prompt is not supported")
 
-# The restriction is specific to the diarizing format; prompt stays legal
-# everywhere else, so this must get past argument checking to the missing
-# endpoint instead.
+# The restriction is the model's, not the format's: prompt stays legal on a
+# non-diarizing model, so this must get past argument checking to the
+# missing endpoint instead. Naming the model is the point of the test --
+# omitting it would encode the format boundary that was wrong.
 expect_error(
-    stt(f, response_format = "verbose_json", backend = "openai",
-        prompt = "Tranquility Base"),
+    stt(f, model = "whisper-1", response_format = "verbose_json",
+        backend = "openai", prompt = "Tranquility Base"),
     "no API base URL is set")
 
 # ---- live: real two-speaker audio through OpenAI ----
@@ -322,4 +350,29 @@ if (at_home() && nzchar(key) && nzchar(clip) && !inherits(named, "error")) {
 
     # Paths, not the encoded clips, in the provenance record.
     expect_equal(attr(named, "call_record")$request$known_speakers, speakers)
+}
+
+# ---- live: the diarizing model on plain json ----
+# Regression for a boundary that was drawn on the response format when the
+# rule is the model's. This call carries no diarized_json anywhere, so
+# nothing keyed on the format defaults chunking_strategy, and OpenAI answers
+# an unset one with HTTP 400 "chunking_strategy is required for diarization
+# models". If it succeeds, the default reached the wire.
+
+if (at_home() && nzchar(key) && nzchar(clip)) {
+    old_pj <- options(stt.api_base = "https://api.openai.com",
+                      stt.api_key = key, stt.timeout = 300)
+    plainjson <- tryCatch(stt(clip, model = "gpt-4o-transcribe-diarize",
+                              response_format = "json", backend = "openai"),
+                          error = function(e) e)
+    options(old_pj)
+
+    expect_false(inherits(plainjson, "error"))
+}
+
+if (at_home() && nzchar(key) && nzchar(clip) &&
+    !inherits(plainjson, "error")) {
+    expect_true(nchar(plainjson$text) > 0)
+    expect_equal(attr(plainjson, "call_record")$request$chunking_strategy,
+                 "auto")
 }

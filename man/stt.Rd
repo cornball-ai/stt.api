@@ -50,13 +50,16 @@ reach a whisper \code{serve()} endpoint.}
 \item{prompt}{Optional text to guide the transcription. For API backend,
 this is passed as initial_prompt to help with spelling of names,
 acronyms, or domain-specific terms. Ignored for whisper backend, and an
-error with \code{response_format = "diarized_json"}: OpenAI does not
-accept a prompt for its diarizing models.}
+error for a diarizing model: OpenAI refuses a prompt for those
+whichever \code{response_format} is requested, so this is rejected on
+the model as well as on \code{diarized_json}.}
 
 \item{chunking_strategy}{Optional chunking strategy passed to the API,
-e.g. "auto". Defaults to "auto" for
-\code{response_format = "diarized_json"}, which OpenAI rejects for audio
-longer than 30 seconds when the parameter is unset. NULL otherwise.}
+e.g. "auto". Defaults to "auto" for any request to a diarizing model
+(\code{response_format = "diarized_json"}, or a \code{model} whose name
+says so), which OpenAI otherwise rejects: always for
+\code{response_format = "json"}, and above 30 seconds of audio for
+\code{diarized_json}. NULL otherwise.}
 
 \item{known_speakers}{Optional named character vector of audio files, at
 most four, giving a short reference clip per speaker. The \emph{names}

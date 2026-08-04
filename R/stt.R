@@ -19,15 +19,18 @@
 #' @param language Language code (e.g., "en", "es", "fr"). Optional hint
 #'   to improve transcription accuracy.
 #' @param response_format Response format for API backend. One of "text",
-#'   "json", "verbose_json", or "diarized_json". Ignored for whisper backend,
-#'   except that "diarized_json" is an error there (see \code{model}).
-#'   "diarized_json" is OpenAI's diarizing format: segments gain a
-#'   \code{speaker} column, and word timings are not available with it.
+#'   "json", "verbose_json", or "diarized_json". Ignored for whisper
+#'   backend, except that a diarizing request is an error there, whether it
+#'   is diarizing by format or by model (see \code{model}). "diarized_json"
+#'   is OpenAI's diarizing format: segments gain a \code{speaker} column,
+#'   and word timings are not available with it.
 #' @param backend Which engine to use: "auto" (default), "whisper",
 #'   or "openai". Auto mode tries whisper first, then the openai API
-#'   (if configured), except for \code{response_format = "diarized_json"},
-#'   which only OpenAI serves and so resolves straight to "openai". See
-#'   \code{source} for *where* the engine runs.
+#'   (if configured), except for a diarizing request, which only OpenAI
+#'   serves and so resolves straight to "openai". That covers
+#'   \code{response_format = "diarized_json"} and also a \code{model} whose
+#'   name marks it as diarizing, since those models answer plain "json" and
+#'   "text" as well. See \code{source} for *where* the engine runs.
 #' @param source Where the engine runs: "auto" (default), "api" for an HTTP
 #'   service (OpenAI, or a self-hosted whisper server; see
 #'   \code{\link{set_stt_base}}), or "package" for the in-process whisper R

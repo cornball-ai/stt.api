@@ -1,6 +1,63 @@
+#' Build the segments data.frame from a parsed API response
+#'
+#' Shared by the timestamped formats. verbose_json segments carry
+#' start/end/text; diarized_json segments add a \code{speaker} label. The
+#' speaker column is added only when the response actually has it, so
+#' \code{is.null(x$segments$speaker)} gives a straight answer either way.
+#'
+#' @param segs The \code{segments} element of the parsed response, or NULL.
+#' @return A data.frame with numeric start/end, or NULL.
+#' @keywords internal
+.parse_api_segments <- function(segs) {
+    if (is.null(segs) || length(segs) == 0) {
+        return(NULL)
+    }
+    # Decided once, for all rows: a per-row conditional would build frames with
+    # different columns, and rbind would then fail.
+    has_speaker <- any(vapply(segs, function(s) !is.null(s$speaker),
+                              logical(1)))
+
+    # A segment is usable only if it carries all three caption fields as
+    # scalars. Anything else is dropped on its own -- building the row
+    # straight from s$start/s$end/s$text would make one malformed segment
+    # collapse the whole response to nothing, since data.frame() with a NULL
+    # column is a legal 0-column frame and rbind then fails on the width
+    # mismatch. That failure is invisible and intermittent: the model decides
+    # how to segment, so the same audio can parse one call and vanish the next.
+    rows <- lapply(segs, function(s) {
+        if (is.null(s$start) || length(s$start) != 1L ||
+            is.null(s$end) || length(s$end) != 1L ||
+            is.null(s$text) || length(s$text) != 1L) {
+            return(NULL)
+        }
+        row <- data.frame(
+                          start = s$start,
+                          end = s$end,
+                          text = as.character(s$text),
+                          stringsAsFactors = FALSE
+        )
+        if (has_speaker) {
+            row$speaker <- as.character(s$speaker %||% NA)
+        }
+        row
+    })
+    rows <- Filter(Negate(is.null), rows)
+    if (length(rows) == 0) {
+        return(NULL)
+    }
+
+    out <- tryCatch(do.call(rbind, rows), error = function(e) NULL)
+    if (is.null(out) || nrow(out) == 0) {
+        return(NULL)
+    }
+    # Normalize to numeric seconds
+    .normalize_segments(out)
+}
+
 # Internal: Transcribe via OpenAI-compatible API
 .via_api <- function(file, model = NULL, language = NULL,
-                     response_format = "json", prompt = NULL) {
+                     response_format = "json", prompt = NULL,
+                     chunking_strategy = NULL) {
     base_url <- .get_api_base(required = TRUE)
     api_key <- .get_api_key()
     timeout <- .get_timeout()
@@ -35,6 +92,14 @@
         gran <- list("segment", "word")
         names(gran) <- c("timestamp_granularities[]", "timestamp_granularities[]")
         form_data <- c(form_data, gran)
+    }
+
+    # diarized_json (gpt-4o-transcribe-diarize) rejects
+    # timestamp_granularities[] -- it carries its own segment timing -- and
+    # rejects audio over 30s unless chunking_strategy is set. stt() resolves
+    # the default, so that what the call_record reports is what went out.
+    if (!is.null(chunking_strategy)) {
+        form_data$chunking_strategy <- chunking_strategy
     }
 
     # Build headers (curl expects "Name: Value" format)
@@ -102,25 +167,7 @@
     }
     )
 
-    # Extract segments if available (verbose_json format)
-    segments <- NULL
-    if (!is.null(parsed$segments) && length(parsed$segments) > 0) {
-        segments <- tryCatch(
-                             {
-            do.call(rbind, lapply(parsed$segments, function(s) {
-                data.frame(
-                           start = s$start,
-                           end = s$end,
-                           text = s$text,
-                           stringsAsFactors = FALSE
-                )
-            }))
-        },
-                             error = function(e) NULL
-        )
-        # Normalize to numeric seconds
-        segments <- .normalize_segments(segments)
-    }
+    segments <- .parse_api_segments(parsed$segments)
 
     # Extract word-level timestamps if available (verbose_json + word
     # granularity), mirroring the native whisper backend's result$words.

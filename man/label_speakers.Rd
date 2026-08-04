@@ -20,9 +20,11 @@ produced with \code{response_format = "diarized_json"}.}
 }
 \value{
 \code{x} with \code{data$text} relabelled. Segments whose speaker
-  is missing are left alone rather than labelled \code{NA}, which happens
-  when a provider matches only some speakers to the references given in
-  \code{known_speakers}.
+  is missing are left alone rather than labelled \code{NA}. Note this is
+  not what a partial \code{known_speakers} match looks like: a speaker
+  the provider cannot match to a reference keeps a generic label, so
+  those segments are labelled with it. A missing speaker means the
+  response omitted the field for that segment.
 }
 \description{
 Diarized results carry speaker labels on \code{segments}, but subtitle

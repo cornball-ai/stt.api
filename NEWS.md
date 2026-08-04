@@ -86,8 +86,9 @@
   Only `data$text` changes; `segments` keeps its own text and labels, and
   the class and `call_record` ride through, so the result still feeds
   `whisper_to_srt()` and `whisper_to_ass()` directly. `sep`, `prefix` and
-  `suffix` control the styling. Segments whose speaker came back unmatched
-  are left alone rather than labelled `NA`.
+  `suffix` control the styling. Segments carrying no speaker at all are left
+  alone rather than labelled `NA` (a speaker the provider could not match to
+  a reference keeps a generic label, and is labelled with that).
 
 * Segment parsing no longer discards a whole response over one bad segment.
   A segment missing `start`, `end` or `text` is dropped on its own; before,

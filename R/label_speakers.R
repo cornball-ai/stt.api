@@ -26,9 +26,11 @@
 #'   \code{suffix = "]"}. Empty by default.
 #'
 #' @return \code{x} with \code{data$text} relabelled. Segments whose speaker
-#'   is missing are left alone rather than labelled \code{NA}, which happens
-#'   when a provider matches only some speakers to the references given in
-#'   \code{known_speakers}.
+#'   is missing are left alone rather than labelled \code{NA}. Note this is
+#'   not what a partial \code{known_speakers} match looks like: a speaker
+#'   the provider cannot match to a reference keeps a generic label, so
+#'   those segments are labelled with it. A missing speaker means the
+#'   response omitted the field for that segment.
 #'
 #' @section Karaoke:
 #' Pass \code{karaoke = FALSE} to
@@ -87,8 +89,10 @@ label_speakers <- function(x, sep = ": ", prefix = "", suffix = "") {
     who <- as.character(x$segments$speaker)
     label <- paste0(prefix, who, suffix, sep)
 
-    # An unmatched speaker comes back missing rather than named. Prefixing
-    # those with "NA: " would put the word NA on screen.
+    # A segment can arrive with no speaker field at all; prefixing those
+    # with "NA: " would put the word NA on screen. This is not the partial
+    # -match case -- a speaker the provider cannot match to a reference
+    # still gets a generic label, and is labelled with it.
     have <- !is.na(who) & nzchar(who)
     x$data$text[have] <- paste0(label[have], trimws(x$data$text[have]))
     x

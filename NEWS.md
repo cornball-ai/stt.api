@@ -1,3 +1,38 @@
+# stt.api 0.3.1.1
+
+* Local speaker labels: `response_format = "diarized_json"` now also runs
+  in-process, pairing whisper with the new 'n3d' package (a native R port
+  of NVIDIA Nemotron 3 Diarization, up to 8 speakers).
+
+  ```r
+  x <- stt("meeting.wav", response_format = "diarized_json",
+           backend = "whisper")
+  x$words[, c("word", "start", "end", "speaker")]
+  ```
+
+  Each whisper word takes the speaker with the most activity over its
+  span, and consecutive words of one speaker form a segment, so the result
+  has the same `segments$speaker` shape as OpenAI's and works with
+  `label_speakers()`. Speakers are labelled "A", "B", ... in order of first
+  arrival. Unlike OpenAI's, the local result keeps word timings, each with
+  its speaker.
+
+  `backend = "auto"` now diarizes locally when whisper and n3d are both
+  installed, as it already prefers local whisper for plain transcription,
+  and uses OpenAI otherwise. Requests only OpenAI can serve still go there:
+  a diarizing model name, `known_speakers`, or `source = "api"`. With an
+  explicit `backend = "whisper"` those are errors, as is a missing n3d.
+  `chunking_strategy` is defaulted for OpenAI requests only.
+
+* New `diarize()`: who spoke when, without a transcript, through n3d.
+  Returns `start`/`end`/`speaker` rows with the same "A", "B", ... labels
+  as `stt()`'s diarized segments. Attaching both stt.api and n3d masks
+  `n3d::diarize()`, which returns numeric speakers.
+
+* n3d is not on CRAN yet: it is in Suggests with `Remotes:
+  cornball-ai/n3d`. Remove the `Remotes` entry once n3d is on CRAN, and
+  before the next CRAN release of stt.api.
+
 # stt.api 0.3.1
 
 * New `response_format = "diarized_json"`: speaker-labelled transcription

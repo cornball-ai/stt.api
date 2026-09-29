@@ -20,17 +20,22 @@
 #'   to improve transcription accuracy.
 #' @param response_format Response format for API backend. One of "text",
 #'   "json", "verbose_json", or "diarized_json". Ignored for whisper
-#'   backend, except that a diarizing request is an error there, whether it
-#'   is diarizing by format or by model (see \code{model}). "diarized_json"
-#'   is OpenAI's diarizing format: segments gain a \code{speaker} column,
-#'   and word timings are not available with it.
+#'   backend, except "diarized_json", which labels speakers there too (see
+#'   \code{backend}). With "diarized_json" segments gain a \code{speaker}
+#'   column. OpenAI returns no word timings with it; local diarization
+#'   keeps them and labels each word.
 #' @param backend Which engine to use: "auto" (default), "whisper",
 #'   or "openai". Auto mode tries whisper first, then the openai API
-#'   (if configured), except for a diarizing request, which only OpenAI
-#'   serves and so resolves straight to "openai". That covers
-#'   \code{response_format = "diarized_json"} and also a \code{model} whose
-#'   name marks it as diarizing, since those models answer plain "json" and
-#'   "text" as well. See \code{source} for *where* the engine runs.
+#'   (if configured). A diarizing request, \code{response_format =
+#'   "diarized_json"} or a \code{model} whose name marks it as diarizing,
+#'   is served by OpenAI or locally by in-process whisper with the
+#'   \pkg{n3d} package (NVIDIA Nemotron 3 Diarization, up to 8 speakers,
+#'   labelled "A", "B", ... in order of first arrival). Auto picks local
+#'   when whisper and n3d are installed and the request has nothing
+#'   OpenAI-specific: a diarizing model name, \code{known_speakers}, or
+#'   \code{source = "api"} send it to OpenAI. Local diarization needs the
+#'   n3d weights, fetched once with \code{n3d::download_n3d()}. See
+#'   \code{source} for *where* the engine runs.
 #' @param source Where the engine runs: "auto" (default), "api" for an HTTP
 #'   service (OpenAI, or a self-hosted whisper server; see
 #'   \code{\link{set_stt_base}}), or "package" for the in-process whisper R
@@ -64,7 +69,8 @@
 #'   Each clip should contain only that speaker and run roughly 2 to 10
 #'   seconds; the files are read and sent inline, so keep them short.
 #'   Requires \code{response_format = "diarized_json"} and is an error
-#'   otherwise.
+#'   otherwise. OpenAI only: it routes "auto" to OpenAI and is an error
+#'   with \code{backend = "whisper"}.
 #'
 #' @return A list with components:
 #' \describe{
@@ -112,7 +118,12 @@
 #'               response_format = "diarized_json")
 #' result$segments[, c("start", "end", "speaker", "text")]
 #'
-#' # ...with your own labels instead of generic ones
+#' # Local speaker labels: in-process whisper plus the n3d package
+#' result <- stt("meeting.wav", response_format = "diarized_json",
+#'               backend = "whisper")
+#' result$words[, c("word", "start", "end", "speaker")]
+#'
+#' # ...with your own labels instead of generic ones (OpenAI only)
 #' audio <- system.file("audio", package = "stt.api")
 #' result <- stt(file.path(audio, "EagleHasLanded.mp3"),
 #'               model = "gpt-4o-transcribe-diarize",
@@ -172,30 +183,51 @@ stt <- function(file, model = NULL, language = NULL,
              call. = FALSE)
     }
 
-    # Only OpenAI diarizes, so a diarizing request already names the backend.
-    # Let the axis whose job is to pick, pick. Keyed on `diarizing` and not
-    # on the format: a diarizing model asked for plain json is still an
-    # OpenAI request, and leaving it on "auto" sent an OpenAI model name to
-    # in-process whisper on any machine that had whisper installed.
+    # Two engines diarize: OpenAI's diarizing models, and in-process whisper
+    # paired with the n3d package (Nemotron 3 Diarization). A request can go
+    # local only when it asks for the format and nothing OpenAI-specific: a
+    # diarizing model name is an OpenAI model, known_speakers is OpenAI's
+    # enrollment, and a whisper serve() endpoint does not diarize. Keyed on
+    # `diarizing` and not on the format: a diarizing model asked for plain
+    # json is still an OpenAI request.
+    openai_only <- .is_diarizing(model, "json") ||
+        length(known_speakers) > 0 || source == "api"
+
+    # "auto" prefers local diarization when both packages are installed, as
+    # it prefers local whisper for plain transcription; otherwise OpenAI.
     if (diarizing && backend == "auto") {
-        backend <- "openai"
+        backend <- if (!openai_only && .has_whisper() && .has_n3d()) {
+            "whisper"
+        } else {
+            "openai"
+        }
     }
 
-    # response_format is advisory for whisper -- the R object is the same
-    # whichever you ask for -- so it is ignored there. A diarizing request is
-    # the exception: it asks for speaker labels no whisper build produces, so
-    # silently ignoring it would hand back a result missing the one thing the
-    # caller wanted. An explicit backend = "whisper" therefore fails here.
+    # An explicit backend = "whisper" diarizes locally or fails; silently
+    # ignoring the request would hand back a result missing the one thing
+    # the caller wanted.
     #
-    # Checked against `backend`, before .resolve_route(), and not against the
-    # resolved route afterwards. Route resolution also decides availability,
-    # so on a machine without whisper installed it raises "package is not
-    # installed" first -- turning an incompatible-argument error into an
-    # environment-dependent one. Which argument combinations are legal cannot
-    # depend on what happens to be installed.
-    if (diarizing && backend != "openai") {
-        stop("a diarizing request requires backend = 'openai' ",
-             "(only OpenAI's models diarize); got backend = '", backend, "'.",
+    # Checked against the arguments, before .resolve_route(), and not against
+    # the resolved route afterwards. Route resolution also decides
+    # availability, so on a machine without whisper installed it raises
+    # "package is not installed" first -- turning an incompatible-argument
+    # error into an environment-dependent one. Which argument combinations
+    # are legal cannot depend on what happens to be installed.
+    local_diarize <- diarizing && backend == "whisper"
+    if (local_diarize && openai_only) {
+        stop("local diarization (backend = 'whisper') cannot serve this ",
+             "request: ",
+            if (.is_diarizing(model, "json")) {
+                paste0("model '", model, "' is an OpenAI diarizing model")
+            } else if (length(known_speakers) > 0) {
+                "known_speakers needs backend = 'openai'"
+            } else {
+                "a whisper serve() endpoint (source = 'api') does not diarize"
+            }, ".", call. = FALSE)
+    }
+    if (local_diarize && !.has_n3d()) {
+        stop("Local diarization needs the n3d package.\n",
+             "Install with: remotes::install_github('cornball-ai/n3d')",
              call. = FALSE)
     }
 
@@ -203,10 +235,11 @@ stt <- function(file, model = NULL, language = NULL,
     # 30s of audio. Measured, not assumed: with the parameter unset a 15s clip
     # succeeds in both json and diarized_json, and a 44s clip is refused in
     # both. So the threshold is the duration and the format does not enter
-    # into it. Defaulted for every diarizing request because the duration is
-    # not known here without decoding the audio, and resolved here rather
-    # than in .via_api() so the call_record reports the value actually sent.
-    if (diarizing && is.null(chunking_strategy)) {
+    # into it. Defaulted for every diarizing OpenAI request because the
+    # duration is not known here without decoding the audio, and resolved
+    # here rather than in .via_api() so the call_record reports the value
+    # actually sent.
+    if (diarizing && backend == "openai" && is.null(chunking_strategy)) {
         chunking_strategy <- "auto"
     }
 
@@ -226,7 +259,8 @@ stt <- function(file, model = NULL, language = NULL,
                  known_speakers = known_speakers
         )
     } else {
-        .via_whisper(file = file, model = model, language = language)
+        .via_whisper(file = file, model = model, language = language,
+                     diarize = local_diarize)
     }
     # Both routes land here with the same normalized shape, so this is where
     # the subtitle-tool shape goes on: the result feeds
@@ -238,22 +272,21 @@ stt <- function(file, model = NULL, language = NULL,
     # an attribute (cornball_sidecar v1, as in xtx.api/tts.api); callers that
     # serialize the result keep its provenance with it.
     attr(res, "call_record") <- list(
-        cornball_sidecar = 1L, package = "stt.api",
-        version = as.character(utils::packageVersion("stt.api")),
-        fn = "stt",
-        request = Filter(Negate(is.null),
-                         list(file = file, model = model,
-                              language = language,
-                              response_format = response_format,
-                              backend = route$backend, source = route$route,
-                              prompt = prompt,
-                              chunking_strategy = chunking_strategy,
-                              # Paths, not the encoded clips: the record is
-                              # provenance, and the base64 would dwarf it.
-                              known_speakers = known_speakers)),
-        elapsed = round(as.numeric(difftime(Sys.time(), started,
-            units = "secs")), 2),
-        created = format(Sys.time(), "%Y-%m-%dT%H:%M:%S%z"))
+                                     cornball_sidecar = 1L, package = "stt.api",
+                                     version = as.character(utils::packageVersion("stt.api")),
+                                     fn = "stt",
+                                     request = Filter(Negate(is.null),
+            list(file = file, model = model,
+                 language = language,
+                 response_format = response_format,
+                 backend = route$backend, source = route$route,
+                 prompt = prompt,
+                 chunking_strategy = chunking_strategy,
+                 # Paths, not the encoded clips: the record is
+                 # provenance, and the base64 would dwarf it.
+                 known_speakers = known_speakers)),
+                                     elapsed = round(as.numeric(difftime(Sys.time(), started,
+                    units = "secs")), 2),
+                                     created = format(Sys.time(), "%Y-%m-%dT%H:%M:%S%z"))
     res
 }
-

@@ -63,9 +63,12 @@ clear_native_whisper_cache <- function() {
 #' @param model Character or NULL. Whisper model name (e.g., "tiny", "base",
 #'   "small", "medium", "large-v3").
 #' @param language Character or NULL. Language code for transcription.
+#' @param diarize Logical. Label speakers with the n3d package; segments and
+#'   words gain a \code{speaker} column.
 #' @return List with transcription results in normalized format.
 #' @keywords internal
-.via_whisper <- function(file, model = NULL, language = NULL) {
+.via_whisper <- function(file, model = NULL, language = NULL,
+                         diarize = FALSE) {
     if (!.has_whisper()) {
         stop(
              "whisper package is not installed.\n",
@@ -118,6 +121,20 @@ clear_native_whisper_cache <- function() {
     # Pass through word-level timestamps if available
     if (!is.null(result$words) && nrow(result$words) > 0) {
         out$words <- result$words
+    }
+
+    if (diarize) {
+        diar <- tryCatch(
+            .n3d_speaker_segments(file, out$words, segments),
+            error = function(e) {
+                stop("Diarization failed: ", conditionMessage(e),
+                     call. = FALSE)
+            })
+        out$segments <- diar$segments
+        if (!is.null(diar$words)) {
+            out$words <- diar$words
+        }
+        out$raw <- list(whisper = result, diarization = diar$diarization)
     }
 
     out

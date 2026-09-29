@@ -63,3 +63,26 @@ if (at_home() && requireNamespace("whisper", quietly = TRUE) &&
     expect_equal(attr(res, "call_record")$request$backend, "whisper")
     expect_null(attr(res, "call_record")$request$chunking_strategy)
 }
+
+# ---- diarize(): speaker-only ----
+
+f <- system.file("DESCRIPTION", package = "stt.api")
+expect_error(stt.api::diarize("no-such-file.wav"), "File not found")
+local({
+    orig <- stt.api:::.has_n3d
+    assignInNamespace(".has_n3d", function() FALSE, ns = "stt.api")
+    on.exit(assignInNamespace(".has_n3d", orig, ns = "stt.api"), add = TRUE)
+    expect_error(stt.api::diarize(f), "needs the n3d package")
+})
+
+if (at_home() && requireNamespace("n3d", quietly = TRUE) &&
+    n3d::n3d_exists()) {
+    clip <- system.file("audio", "EagleHasLanded.mp3", package = "stt.api")
+    d <- stt.api::diarize(clip)
+    expect_equal(names(d), c("start", "end", "speaker"))
+    expect_true(nrow(d) > 1)
+    expect_true(all(d$speaker %in% LETTERS[1:8]))
+    # first arrival is A
+    expect_equal(d$speaker[which.min(d$start)], "A")
+    expect_equal(attr(d, "call_record")$fn, "diarize")
+}

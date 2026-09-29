@@ -24,6 +24,11 @@
   explicit `backend = "whisper"` those are errors, as is a missing n3d.
   `chunking_strategy` is defaulted for OpenAI requests only.
 
+* New `diarize()`: who spoke when, without a transcript, through n3d.
+  Returns `start`/`end`/`speaker` rows with the same "A", "B", ... labels
+  as `stt()`'s diarized segments. Attaching both stt.api and n3d masks
+  `n3d::diarize()`, which returns numeric speakers.
+
 * n3d is not on CRAN yet: it is in Suggests with `Remotes:
   cornball-ai/n3d`. Remove the `Remotes` entry once n3d is on CRAN, and
   before the next CRAN release of stt.api.

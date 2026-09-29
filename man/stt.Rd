@@ -36,18 +36,23 @@ to improve transcription accuracy.}
 
 \item{response_format}{Response format for API backend. One of "text",
 "json", "verbose_json", or "diarized_json". Ignored for whisper
-backend, except that a diarizing request is an error there, whether it
-is diarizing by format or by model (see \code{model}). "diarized_json"
-is OpenAI's diarizing format: segments gain a \code{speaker} column,
-and word timings are not available with it.}
+backend, except "diarized_json", which labels speakers there too (see
+\code{backend}). With "diarized_json" segments gain a \code{speaker}
+column. OpenAI returns no word timings with it; local diarization
+keeps them and labels each word.}
 
 \item{backend}{Which engine to use: "auto" (default), "whisper",
 or "openai". Auto mode tries whisper first, then the openai API
-(if configured), except for a diarizing request, which only OpenAI
-serves and so resolves straight to "openai". That covers
-\code{response_format = "diarized_json"} and also a \code{model} whose
-name marks it as diarizing, since those models answer plain "json" and
-"text" as well. See \code{source} for *where* the engine runs.}
+(if configured). A diarizing request, \code{response_format =
+"diarized_json"} or a \code{model} whose name marks it as diarizing,
+is served by OpenAI or locally by in-process whisper with the
+\pkg{n3d} package (NVIDIA Nemotron 3 Diarization, up to 8 speakers,
+labelled "A", "B", ... in order of first arrival). Auto picks local
+when whisper and n3d are installed and the request has nothing
+OpenAI-specific: a diarizing model name, \code{known_speakers}, or
+\code{source = "api"} send it to OpenAI. Local diarization needs the
+n3d weights, fetched once with \code{n3d::download_n3d()}. See
+\code{source} for *where* the engine runs.}
 
 \item{source}{Where the engine runs: "auto" (default), "api" for an HTTP
 service (OpenAI, or a self-hosted whisper server; see
@@ -85,7 +90,8 @@ segmentation: speakers the model has already merged into one cluster
 Each clip should contain only that speaker and run roughly 2 to 10
 seconds; the files are read and sent inline, so keep them short.
 Requires \code{response_format = "diarized_json"} and is an error
-otherwise.}
+otherwise. OpenAI only: it routes "auto" to OpenAI and is an error
+with \code{backend = "whisper"}.}
 }
 \value{
 A list with components:
@@ -138,7 +144,12 @@ result <- stt("meeting.wav", model = "gpt-4o-transcribe-diarize",
               response_format = "diarized_json")
 result$segments[, c("start", "end", "speaker", "text")]
 
-# ...with your own labels instead of generic ones
+# Local speaker labels: in-process whisper plus the n3d package
+result <- stt("meeting.wav", response_format = "diarized_json",
+              backend = "whisper")
+result$words[, c("word", "start", "end", "speaker")]
+
+# ...with your own labels instead of generic ones (OpenAI only)
 audio <- system.file("audio", package = "stt.api")
 result <- stt(file.path(audio, "EagleHasLanded.mp3"),
               model = "gpt-4o-transcribe-diarize",

@@ -110,51 +110,80 @@ expect_true(file.exists(f))
 
 old <- options(stt.api_base = NULL, stt.api_key = NULL)
 
-# Explicitly asking for whisper while asking for speaker labels is an error,
-# not a silently undiarized result.
-expect_error(
+# Stub both availability probes while `code` runs. Route resolution also
+# decides availability, so stubbing pins every rule below regardless of what
+# the test machine has installed.
+with_available <- function(whisper, n3d, code) {
+    ow <- stt.api:::.has_whisper
+    on3 <- stt.api:::.has_n3d
+    assignInNamespace(".has_whisper", function() whisper, ns = "stt.api")
+    assignInNamespace(".has_n3d", function() n3d, ns = "stt.api")
+    on.exit({
+        assignInNamespace(".has_whisper", ow, ns = "stt.api")
+        assignInNamespace(".has_n3d", on3, ns = "stt.api")
+    }, add = TRUE)
+    force(code)
+}
+
+# Explicit whisper diarizes locally; without n3d that is an error naming the
+# missing package, not a silently undiarized result.
+with_available(TRUE, FALSE, expect_error(
     stt(f, response_format = "diarized_json", backend = "whisper"),
-    "requires backend = 'openai'")
+    "needs the n3d package"))
 
-# ...and that error must not depend on whisper being installed. Route
-# resolution also decides availability, so checking the resolved route
-# instead of the argument raised "package is not installed" first on any
-# machine without whisper -- green locally, red on CI. Stubbing the
-# availability probe pins the ordering.
-local({
-    orig <- stt.api:::.has_whisper
-    assignInNamespace(".has_whisper", function() FALSE, ns = "stt.api")
-    on.exit(assignInNamespace(".has_whisper", orig, ns = "stt.api"),
-            add = TRUE)
-    expect_error(
-        stt(f, response_format = "diarized_json", backend = "whisper"),
-        "requires backend = 'openai'")
-})
-
-# backend = "auto" resolves to openai rather than to in-process whisper, so
-# with no base URL set the failure is the missing endpoint, not the backend.
-expect_error(
-    stt(f, response_format = "diarized_json"),
-    "no API base URL is set")
-
-# Same for a diarizing model asked for plain json, which carries no
-# diarized_json anywhere. Keyed on the format instead of the model, this
-# stayed on "auto" and .resolve_route() picked whisper/package wherever
-# whisper happened to be installed -- dispatching an OpenAI model name to
-# the in-process engine. Stubbing availability both ways pins the routing
-# regardless of what the test machine has.
+# Requests only OpenAI can serve are argument errors with backend =
+# "whisper", whatever is installed: which argument combinations are legal
+# cannot depend on it.
 for (installed in c(TRUE, FALSE)) {
-    local({
-        orig <- stt.api:::.has_whisper
-        assignInNamespace(".has_whisper", function() installed,
-                          ns = "stt.api")
-        on.exit(assignInNamespace(".has_whisper", orig, ns = "stt.api"),
-                add = TRUE)
+    with_available(installed, installed, {
         expect_error(
             stt(f, model = "gpt-4o-transcribe-diarize",
-                response_format = "json"),
-            "no API base URL is set", info = paste("whisper:", installed))
+                response_format = "diarized_json", backend = "whisper"),
+            "is an OpenAI diarizing model")
+        expect_error(
+            stt(f, response_format = "diarized_json", backend = "whisper",
+                source = "api"),
+            "does not diarize")
     })
+}
+
+# backend = "auto" goes to OpenAI when local diarization is not installed,
+# so with no base URL set the failure is the missing endpoint.
+with_available(TRUE, FALSE, expect_error(
+    stt(f, response_format = "diarized_json"),
+    "no API base URL is set"))
+with_available(FALSE, TRUE, expect_error(
+    stt(f, response_format = "diarized_json"),
+    "no API base URL is set"))
+
+# ...and to local when it is installed: a stubbed engine shows the dispatch.
+local({
+    orig <- stt.api:::.via_whisper
+    assignInNamespace(".via_whisper", function(file, model = NULL,
+                                               language = NULL,
+                                               diarize = FALSE) {
+        stop("reached local whisper, diarize = ", diarize)
+    }, ns = "stt.api")
+    on.exit(assignInNamespace(".via_whisper", orig, ns = "stt.api"),
+            add = TRUE)
+    with_available(TRUE, TRUE, {
+        expect_error(stt(f, response_format = "diarized_json"),
+                     "reached local whisper, diarize = TRUE")
+        # source = "api" still means an HTTP service, which is OpenAI here
+        expect_error(stt(f, response_format = "diarized_json",
+                         source = "api"),
+                     "no API base URL is set")
+    })
+})
+
+# A diarizing model asked for plain json carries no diarized_json anywhere,
+# and it is still an OpenAI model: it must never reach in-process whisper,
+# whatever is installed.
+for (installed in c(TRUE, FALSE)) {
+    with_available(installed, installed, expect_error(
+        stt(f, model = "gpt-4o-transcribe-diarize",
+            response_format = "json"),
+        "no API base URL is set", info = paste("installed:", installed)))
 }
 
 # The format is a real choice, not a typo caught by match.arg.

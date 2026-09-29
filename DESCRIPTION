@@ -8,7 +8,8 @@ Authors@R: c(
 Description: A minimal-dependency R client for 'OpenAI'-compatible speech-to-text
     APIs (see <https://developers.openai.com/api/reference/resources/audio>) with
     optional local fallbacks. Supports 'OpenAI', local servers, and the
-    'whisper' package for local transcription.
+    'whisper' package for local transcription, with local speaker labels
+    from the 'n3d' package.
 License: MIT + file LICENSE
 Encoding: UTF-8
 URL: https://github.com/cornball-ai/stt.api
@@ -17,5 +18,8 @@ Imports:
     curl,
     jsonlite
 Suggests:
+    n3d,
     tinytest,
     whisper
+Remotes:
+    cornball-ai/n3d

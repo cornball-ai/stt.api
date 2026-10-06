@@ -1,3 +1,13 @@
+# stt.api 0.3.1.2
+
+* Speaker labels over a whisper `serve()` endpoint: `stt(file,
+  response_format = "diarized_json", backend = "whisper", source =
+  "api")` now asks the endpoint for word timings and labels them locally
+  with 'n3d', as it already did for in-process whisper. It needs n3d and
+  not the whisper package. Before, the combination was refused as "a
+  whisper serve() endpoint does not diarize". `backend = "auto"` with
+  `source = "api"` still means OpenAI.
+
 # stt.api 0.3.1.1
 
 * Local speaker labels: `response_format = "diarized_json"` now also runs

@@ -124,17 +124,7 @@ clear_native_whisper_cache <- function() {
     }
 
     if (diarize) {
-        diar <- tryCatch(
-            .n3d_speaker_segments(file, out$words, segments),
-            error = function(e) {
-                stop("Diarization failed: ", conditionMessage(e),
-                     call. = FALSE)
-            })
-        out$segments <- diar$segments
-        if (!is.null(diar$words)) {
-            out$words <- diar$words
-        }
-        out$raw <- list(whisper = result, diarization = diar$diarization)
+        out <- .label_locally(file, out)
     }
 
     out

@@ -142,10 +142,83 @@ for (installed in c(TRUE, FALSE)) {
             "is an OpenAI diarizing model")
         expect_error(
             stt(f, response_format = "diarized_json", backend = "whisper",
-                source = "api"),
-            "does not diarize")
+                known_speakers = c(a = f)),
+            "known_speakers needs backend = 'openai'")
     })
 }
+
+# A whisper serve() endpoint does not diarize, but n3d does, locally, from
+# the word timings the endpoint returns: with n3d installed the request is
+# legal and fails only on the missing endpoint, and the whisper package is
+# not needed for it. Without n3d it is the missing package, as in process.
+with_available(FALSE, TRUE, expect_error(
+    stt(f, response_format = "diarized_json", backend = "whisper",
+        source = "api"),
+    "no API base URL is set"))
+with_available(TRUE, FALSE, expect_error(
+    stt(f, response_format = "diarized_json", backend = "whisper",
+        source = "api"),
+    "needs the n3d package"))
+
+# ...and what goes over the wire is verbose_json, with the labels put on
+# here: a stubbed endpoint and a stubbed n3d show the whole path.
+local({
+    seen <- new.env()
+    orig_api <- stt.api:::.via_api
+    orig_n3d <- stt.api:::.n3d_speaker_segments
+    assignInNamespace(".via_api", function(file, model = NULL,
+                                           language = NULL,
+                                           response_format = "json",
+                                           prompt = NULL,
+                                           chunking_strategy = NULL,
+                                           known_speakers = NULL) {
+        seen$format <- response_format
+        list(text = "hello there hi back",
+             segments = data.frame(start = c(0, 1.6), end = c(0.9, 2.8),
+                                   text = c("hello there", "hi back"),
+                                   stringsAsFactors = FALSE),
+             words = data.frame(word = c("hello", "there", "hi", "back"),
+                                start = c(0, 0.5, 1.6, 2.2),
+                                end = c(0.4, 0.9, 2.0, 2.8),
+                                stringsAsFactors = FALSE),
+             language = "en", backend = "api", raw = list(endpoint = TRUE))
+    }, ns = "stt.api")
+    assignInNamespace(".n3d_speaker_segments", function(file, words,
+                                                        segments) {
+        seen$words <- words
+        words$speaker <- c("A", "A", "B", "B")
+        list(segments = data.frame(start = c(0, 1.6), end = c(0.9, 2.8),
+                                   text = c("hello there", "hi back"),
+                                   speaker = c("A", "B"),
+                                   stringsAsFactors = FALSE),
+             words = words, diarization = data.frame(speaker = c("A", "B")))
+    }, ns = "stt.api")
+    on.exit({
+        assignInNamespace(".via_api", orig_api, ns = "stt.api")
+        assignInNamespace(".n3d_speaker_segments", orig_n3d, ns = "stt.api")
+    }, add = TRUE)
+    options(stt.api_base = "http://serve.test:7809")
+    res <- with_available(FALSE, TRUE,
+        stt(f, response_format = "diarized_json", backend = "whisper",
+            source = "api"))
+    options(stt.api_base = NULL)
+    expect_equal(seen$format, "verbose_json")
+    expect_equal(nrow(seen$words), 4L)
+    expect_equal(res$segments$speaker, c("A", "B"))
+    expect_equal(res$words$speaker, c("A", "A", "B", "B"))
+    # the endpoint's own answer is kept whole beside n3d's segments
+    expect_true(isTRUE(res$raw$whisper$endpoint))
+    expect_equal(nrow(res$raw$diarization), 2L)
+    # still captions, with the labels available to fold in
+    expect_true(inherits(res, "whisper_transcription"))
+    expect_equal(stt.api::label_speakers(res)$data$text,
+                 c("A: hello there", "B: hi back"))
+    rec <- attr(res, "call_record")$request
+    expect_equal(rec$response_format, "diarized_json")
+    expect_equal(rec$backend, "whisper")
+    expect_equal(rec$source, "api")
+    expect_null(rec$chunking_strategy)
+})
 
 # backend = "auto" goes to OpenAI when local diarization is not installed,
 # so with no base URL set the failure is the missing endpoint.

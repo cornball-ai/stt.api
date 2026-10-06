@@ -38,14 +38,26 @@
 #'   \code{source} for *where* the engine runs.
 #' @param source Where the engine runs: "auto" (default), "api" for an HTTP
 #'   service (OpenAI, or a self-hosted whisper server; see
-#'   \code{\link{set_stt_base}}), or "package" for the in-process whisper R
-#'   package. "auto" runs whisper in-process and openai via the API, matching
-#'   the previous behavior. Use \code{backend = "whisper", source = "api"} to
+#'   \code{\link{set_stt_base}}), "package" for the in-process whisper R
+#'   package, or "gpuhost" for the fleet's GPU host through the
+#'   \pkg{gpu.host} package. "auto" runs whisper in-process when the package
+#'   is installed, else on the GPU host when one is configured, else openai
+#'   via the API. Use \code{backend = "whisper", source = "api"} to
 #'   reach a whisper \code{serve()} endpoint. Such an endpoint does not
 #'   diarize, but n3d does, here: with \code{response_format =
 #'   "diarized_json"} the endpoint is asked for word timings and n3d labels
 #'   them locally, exactly as for in-process whisper. That needs n3d
-#'   installed, and the whisper package not at all.
+#'   installed, and the whisper package not at all. The same holds for
+#'   "gpuhost": the host returns word timings and n3d labels them here.
+#'
+#'   With "gpuhost", \code{model} is the host's catalog entry name
+#'   ("whisper-small", "whisper-large-v3"); NULL takes
+#'   \code{options(stt.gpuhost_entry)}, else the first whisper entry the
+#'   host lists. The host's whisper entries take no language, so
+#'   \code{language} is not sent and the result reports what the host
+#'   detected. Where the host is and its token come from gpu.host's
+#'   configuration (\code{gpu.host::gpu_host_config()}); \code{stt.timeout}
+#'   bounds the request.
 #' @param prompt Optional text to guide the transcription. For API backend,
 #'   this is passed as initial_prompt to help with spelling of names,
 #'   acronyms, or domain-specific terms. Ignored for whisper backend, and an
@@ -88,10 +100,10 @@
 #'     and on OpenAI only from "whisper-1"; see \code{model}); otherwise
 #'     absent.}
 #'   \item{language}{The detected or specified language code.}
-#'   \item{backend}{The legacy execution route ("api" or "whisper"). This
-#'     reports *where* the engine ran, not the engine itself; the resolved
-#'     \code{backend}/\code{source} pair lives in the \code{"call_record"}
-#'     attribute.}
+#'   \item{backend}{The legacy execution route ("api", "whisper" or
+#'     "gpuhost"). This reports *where* the engine ran, not the engine
+#'     itself; the resolved \code{backend}/\code{source} pair lives in the
+#'     \code{"call_record"} attribute.}
 #'   \item{raw}{The raw response from the backend.}
 #' }
 #' When the result has usable segments (\code{start}/\code{end}/\code{text}
@@ -143,6 +155,10 @@
 #'
 #' # In-process whisper package
 #' result <- stt("speech.wav", backend = "whisper", source = "package")
+#'
+#' # The fleet's GPU host, configured once through gpu.host
+#' gpu.host::gpu_host_config("http://troy-g5:7878", "~/gpuhost.token")
+#' result <- stt("speech.wav", source = "gpuhost")
 #' }
 #'
 #' @export
@@ -150,8 +166,9 @@ stt <- function(file, model = NULL, language = NULL,
                 response_format = c("json", "text", "verbose_json",
                                     "diarized_json"),
                 backend = c("auto", "whisper", "openai"),
-                source = c("auto", "api", "package"), prompt = NULL,
-                chunking_strategy = NULL, known_speakers = NULL) {
+                source = c("auto", "api", "package", "gpuhost"),
+                prompt = NULL, chunking_strategy = NULL,
+                known_speakers = NULL) {
     # Validate file
     if (!file.exists(file)) {
         stop("File not found: ", file, call. = FALSE)
@@ -200,9 +217,14 @@ stt <- function(file, model = NULL, language = NULL,
     # "auto" prefers local diarization when both packages are installed, as
     # it prefers local whisper for plain transcription; otherwise OpenAI.
     # source = "api" under "auto" still means OpenAI: an HTTP service with
-    # no engine named is the one with its own diarization.
+    # no engine named is the one with its own diarization. The GPU host
+    # counts as whisper here: it returns the word timings n3d labels, so
+    # it needs n3d and not the whisper package, whether named as the
+    # source or found by "auto" when no whisper package is installed.
     if (diarizing && backend == "auto") {
-        backend <- if (!openai_only && source != "api" && .has_whisper() &&
+        whisper_here <- source == "gpuhost" || .has_whisper() ||
+            (source == "auto" && .gpu_host_configured())
+        backend <- if (!openai_only && source != "api" && whisper_here &&
                        .has_n3d()) {
             "whisper"
         } else {
@@ -248,12 +270,18 @@ stt <- function(file, model = NULL, language = NULL,
         chunking_strategy <- "auto"
     }
 
-    # Resolve the engine and where it runs (in-process package vs HTTP API)
+    # Resolve the engine and where it runs: in-process package, HTTP API,
+    # or the fleet's GPU host
     route <- .resolve_route(backend, source)
 
     # Dispatch to appropriate route
     started <- Sys.time()
-    res <- if (route$route == "api") {
+    res <- if (route$route == "gpuhost") {
+        # One /infer request; the host answers with segments and word
+        # timings always, and n3d labels them below when asked
+        .via_gpuhost(file = file, model = model, language = language,
+                     diarize = local_diarize)
+    } else if (route$route == "api") {
         # A locally labelled request asks the endpoint for verbose_json,
         # which carries the segments and word timings n3d labels below;
         # diarized_json on the wire is OpenAI's format, and a whisper

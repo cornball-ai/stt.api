@@ -5,8 +5,9 @@
 #' @return A list with components:
 #' \describe{
 #'   \item{ok}{Logical. TRUE if a backend is available.}
-#'   \item{backend}{Character. The available backend ("api" or "whisper"),
-#'     or NULL if none available.}
+#'   \item{backend}{Character. The available backend ("whisper", "gpuhost"
+#'     or "api"), in the order \code{stt()}'s "auto" tries them, or NULL if
+#'     none is available.}
 #'   \item{message}{Character. Status message with details.}
 #' }
 #'
@@ -29,6 +30,25 @@ stt_health <- function() {
             ))
     }
 
+    # The fleet's GPU host, when gpu.host is configured: the probe asks
+    # the host what it serves, so "ok" here means a whisper entry is there
+    if (.gpu_host_configured()) {
+        h <- tryCatch(gpu.host::gpu_host_health(), error = function(e) e)
+        if (!inherits(h, "error")) {
+            entries <- as.character(h$entries)
+            if (any(startsWith(entries, "whisper"))) {
+                return(list(
+                            ok = TRUE,
+                            backend = "gpuhost",
+                            message = paste0("GPU host at ",
+                                             gpu.host::gpu_host_base(),
+                                             " serves ",
+                                             paste(entries, collapse = ", "))
+                    ))
+            }
+        }
+    }
+
     # Check API backend
     api_base <- .get_api_base()
     if (!is.null(api_base)) {
@@ -39,7 +59,8 @@ stt_health <- function() {
     list(
          ok = FALSE,
          backend = NULL,
-         message = "No backend available. Install whisper or set stt.api_base."
+         message = paste("No backend available. Install whisper, configure",
+                         "gpu.host, or set stt.api_base.")
     )
 }
 

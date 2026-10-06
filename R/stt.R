@@ -41,7 +41,11 @@
 #'   \code{\link{set_stt_base}}), or "package" for the in-process whisper R
 #'   package. "auto" runs whisper in-process and openai via the API, matching
 #'   the previous behavior. Use \code{backend = "whisper", source = "api"} to
-#'   reach a whisper \code{serve()} endpoint.
+#'   reach a whisper \code{serve()} endpoint. Such an endpoint does not
+#'   diarize, but n3d does, here: with \code{response_format =
+#'   "diarized_json"} the endpoint is asked for word timings and n3d labels
+#'   them locally, exactly as for in-process whisper. That needs n3d
+#'   installed, and the whisper package not at all.
 #' @param prompt Optional text to guide the transcription. For API backend,
 #'   this is passed as initial_prompt to help with spelling of names,
 #'   acronyms, or domain-specific terms. Ignored for whisper backend, and an
@@ -183,20 +187,23 @@ stt <- function(file, model = NULL, language = NULL,
              call. = FALSE)
     }
 
-    # Two engines diarize: OpenAI's diarizing models, and in-process whisper
-    # paired with the n3d package (Nemotron 3 Diarization). A request can go
-    # local only when it asks for the format and nothing OpenAI-specific: a
-    # diarizing model name is an OpenAI model, known_speakers is OpenAI's
-    # enrollment, and a whisper serve() endpoint does not diarize. Keyed on
-    # `diarizing` and not on the format: a diarizing model asked for plain
-    # json is still an OpenAI request.
-    openai_only <- .is_diarizing(model, "json") ||
-        length(known_speakers) > 0 || source == "api"
+    # Two engines diarize: OpenAI's diarizing models, and whisper paired
+    # with the n3d package (Nemotron 3 Diarization), whether whisper runs in
+    # process or behind a serve() endpoint -- the endpoint returns word
+    # timings and n3d labels them here. A request can go local only when it
+    # asks for the format and nothing OpenAI-specific: a diarizing model
+    # name is an OpenAI model and known_speakers is OpenAI's enrollment.
+    # Keyed on `diarizing` and not on the format: a diarizing model asked
+    # for plain json is still an OpenAI request.
+    openai_only <- .is_diarizing(model, "json") || length(known_speakers) > 0
 
     # "auto" prefers local diarization when both packages are installed, as
     # it prefers local whisper for plain transcription; otherwise OpenAI.
+    # source = "api" under "auto" still means OpenAI: an HTTP service with
+    # no engine named is the one with its own diarization.
     if (diarizing && backend == "auto") {
-        backend <- if (!openai_only && .has_whisper() && .has_n3d()) {
+        backend <- if (!openai_only && source != "api" && .has_whisper() &&
+                       .has_n3d()) {
             "whisper"
         } else {
             "openai"
@@ -219,10 +226,8 @@ stt <- function(file, model = NULL, language = NULL,
              "request: ",
             if (.is_diarizing(model, "json")) {
                 paste0("model '", model, "' is an OpenAI diarizing model")
-            } else if (length(known_speakers) > 0) {
-                "known_speakers needs backend = 'openai'"
             } else {
-                "a whisper serve() endpoint (source = 'api') does not diarize"
+                "known_speakers needs backend = 'openai'"
             }, ".", call. = FALSE)
     }
     if (local_diarize && !.has_n3d()) {
@@ -249,11 +254,19 @@ stt <- function(file, model = NULL, language = NULL,
     # Dispatch to appropriate route
     started <- Sys.time()
     res <- if (route$route == "api") {
+        # A locally labelled request asks the endpoint for verbose_json,
+        # which carries the segments and word timings n3d labels below;
+        # diarized_json on the wire is OpenAI's format, and a whisper
+        # serve() endpoint would refuse or ignore it.
         .via_api(
                  file = file,
                  model = model,
                  language = language,
-                 response_format = response_format,
+                 response_format = if (local_diarize) {
+                     "verbose_json"
+                 } else {
+                     response_format
+                 },
                  prompt = prompt,
                  chunking_strategy = chunking_strategy,
                  known_speakers = known_speakers
@@ -261,6 +274,9 @@ stt <- function(file, model = NULL, language = NULL,
     } else {
         .via_whisper(file = file, model = model, language = language,
                      diarize = local_diarize)
+    }
+    if (local_diarize && route$route == "api") {
+        res <- .label_locally(file, res)
     }
     # Both routes land here with the same normalized shape, so this is where
     # the subtitle-tool shape goes on: the result feeds

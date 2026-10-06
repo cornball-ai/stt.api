@@ -59,7 +59,11 @@ service (OpenAI, or a self-hosted whisper server; see
 \code{\link{set_stt_base}}), or "package" for the in-process whisper R
 package. "auto" runs whisper in-process and openai via the API, matching
 the previous behavior. Use \code{backend = "whisper", source = "api"} to
-reach a whisper \code{serve()} endpoint.}
+reach a whisper \code{serve()} endpoint. Such an endpoint does not
+diarize, but n3d does, here: with \code{response_format =
+"diarized_json"} the endpoint is asked for word timings and n3d labels
+them locally, exactly as for in-process whisper. That needs n3d
+installed, and the whisper package not at all.}
 
 \item{prompt}{Optional text to guide the transcription. For API backend,
 this is passed as initial_prompt to help with spelling of names,

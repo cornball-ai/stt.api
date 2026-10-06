@@ -40,6 +40,34 @@
     list(segments = segs, words = words, diarization = diar$segments)
 }
 
+#' Label a transcription's segments with n3d
+#'
+#' The one step both local routes share: in-process whisper and a
+#' whisper serve() endpoint each hand back segments and (when asked) word
+#' timings, and n3d labels them from the audio the same way. The
+#' unlabelled result is kept whole under \code{raw$whisper}, beside the
+#' n3d segments.
+#'
+#' @param file Path to the audio file.
+#' @param res A normalized result: \code{segments}, optional \code{words},
+#'   \code{raw}.
+#' @return \code{res} with a \code{speaker} column on \code{segments} (and
+#'   on \code{words}, when present), or an error naming the step.
+#' @keywords internal
+.label_locally <- function(file, res) {
+    diar <- tryCatch(
+        .n3d_speaker_segments(file, res$words, res$segments),
+        error = function(e) {
+            stop("Diarization failed: ", conditionMessage(e), call. = FALSE)
+        })
+    res$segments <- diar$segments
+    if (!is.null(diar$words)) {
+        res$words <- diar$words
+    }
+    res$raw <- list(whisper = res$raw, diarization = diar$diarization)
+    res
+}
+
 # Speaker label with the most activity over each [start, end] span. Spans
 # with no detected speech take the nearest labelled neighbour's speaker.
 .assign_speakers <- function(start, end, probs, frame_duration = 0.01) {

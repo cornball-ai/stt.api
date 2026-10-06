@@ -9,8 +9,9 @@ stt_health()
 A list with components:
 \describe{
   \item{ok}{Logical. TRUE if a backend is available.}
-  \item{backend}{Character. The available backend ("api" or "whisper"),
-    or NULL if none available.}
+  \item{backend}{Character. The available backend ("whisper", "gpuhost"
+    or "api"), in the order \code{stt()}'s "auto" tries them, or NULL if
+    none is available.}
   \item{message}{Character. Status message with details.}
 }
 }

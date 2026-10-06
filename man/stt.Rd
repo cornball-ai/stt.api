@@ -9,7 +9,7 @@ stt(
   language = NULL,
   response_format = c("json", "text", "verbose_json", "diarized_json"),
   backend = c("auto", "whisper", "openai"),
-  source = c("auto", "api", "package"),
+  source = c("auto", "api", "package", "gpuhost"),
   prompt = NULL,
   chunking_strategy = NULL,
   known_speakers = NULL
@@ -56,14 +56,26 @@ n3d weights, fetched once with \code{n3d::download_n3d()}. See
 
 \item{source}{Where the engine runs: "auto" (default), "api" for an HTTP
 service (OpenAI, or a self-hosted whisper server; see
-\code{\link{set_stt_base}}), or "package" for the in-process whisper R
-package. "auto" runs whisper in-process and openai via the API, matching
-the previous behavior. Use \code{backend = "whisper", source = "api"} to
+\code{\link{set_stt_base}}), "package" for the in-process whisper R
+package, or "gpuhost" for the fleet's GPU host through the
+\pkg{gpu.host} package. "auto" runs whisper in-process when the package
+is installed, else on the GPU host when one is configured, else openai
+via the API. Use \code{backend = "whisper", source = "api"} to
 reach a whisper \code{serve()} endpoint. Such an endpoint does not
 diarize, but n3d does, here: with \code{response_format =
 "diarized_json"} the endpoint is asked for word timings and n3d labels
 them locally, exactly as for in-process whisper. That needs n3d
-installed, and the whisper package not at all.}
+installed, and the whisper package not at all. The same holds for
+"gpuhost": the host returns word timings and n3d labels them here.
+
+With "gpuhost", \code{model} is the host's catalog entry name
+("whisper-small", "whisper-large-v3"); NULL takes
+\code{options(stt.gpuhost_entry)}, else the first whisper entry the
+host lists. The host's whisper entries take no language, so
+\code{language} is not sent and the result reports what the host
+detected. Where the host is and its token come from gpu.host's
+configuration (\code{gpu.host::gpu_host_config()}); \code{stt.timeout}
+bounds the request.}
 
 \item{prompt}{Optional text to guide the transcription. For API backend,
 this is passed as initial_prompt to help with spelling of names,
@@ -110,10 +122,10 @@ A list with components:
     and on OpenAI only from "whisper-1"; see \code{model}); otherwise
     absent.}
   \item{language}{The detected or specified language code.}
-  \item{backend}{The legacy execution route ("api" or "whisper"). This
-    reports *where* the engine ran, not the engine itself; the resolved
-    \code{backend}/\code{source} pair lives in the \code{"call_record"}
-    attribute.}
+  \item{backend}{The legacy execution route ("api", "whisper" or
+    "gpuhost"). This reports *where* the engine ran, not the engine
+    itself; the resolved \code{backend}/\code{source} pair lives in the
+    \code{"call_record"} attribute.}
   \item{raw}{The raw response from the backend.}
 }
 When the result has usable segments (\code{start}/\code{end}/\code{text}
@@ -169,6 +181,10 @@ result <- stt("speech.wav", backend = "whisper", source = "api")
 
 # In-process whisper package
 result <- stt("speech.wav", backend = "whisper", source = "package")
+
+# The fleet's GPU host, configured once through gpu.host
+gpu.host::gpu_host_config("http://troy-g5:7878", "~/gpuhost.token")
+result <- stt("speech.wav", source = "gpuhost")
 }
 
 }

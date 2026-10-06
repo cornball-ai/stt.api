@@ -1,3 +1,18 @@
+# stt.api 0.3.1.3
+
+* A third place whisper runs: `source = "gpuhost"` sends the audio to
+  the fleet's GPU host through the 'gpu.host' package (Suggests), one
+  `/infer` request with the file base64 in the body. `model` is the
+  host's catalog entry (`"whisper-small"`, `"whisper-large-v3"`); NULL
+  takes `options(stt.gpuhost_entry)`, else the first whisper entry the
+  host's `/health` lists. Segments and word timings always come back,
+  so `response_format = "diarized_json"` labels them locally with n3d
+  as it does over a `serve()` endpoint. `source = "auto"` now tries
+  the in-process package, then a configured GPU host, then the API.
+  `stt_health()` reports the host, with what it serves, in that order.
+  The host's whisper entries take no language, so `language` is not
+  sent on this route.
+
 # stt.api 0.3.1.2
 
 * Speaker labels over a whisper `serve()` endpoint: `stt(file,

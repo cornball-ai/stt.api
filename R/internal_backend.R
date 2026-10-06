@@ -75,37 +75,58 @@
 #
 # Two axes, mirroring tts.api: `backend` is the engine ("whisper" or "openai",
 # "auto" picks), `source` is where it runs ("package" in-process, "api" over
-# HTTP, "auto" picks). Returns list(backend = , route = ) where route is one of
-# "package" or "api". source = "auto" reproduces the previous behavior (whisper
-# in-process, openai via API), so existing calls are unchanged.
+# HTTP, "gpuhost" on the fleet's GPU host, "auto" picks). Returns
+# list(backend = , route = ) where route is one of "package", "api" or
+# "gpuhost". source = "auto" keeps the earlier order (whisper in-process,
+# then openai via API) and slots the GPU host between them: a configured
+# host is a deliberate setup, so it outranks a hosted API, and the
+# in-process package still comes first so existing calls are unchanged.
 .resolve_route <- function(backend = c("auto", "whisper", "openai"),
-                           source = c("auto", "api", "package")) {
+                           source = c("auto", "api", "package", "gpuhost")) {
     backend <- match.arg(backend)
     source <- match.arg(source)
 
     if (backend == "openai") {
-        if (source == "package") {
-            stop("source = 'package' is only available for backend = ",
+        if (source %in% c("package", "gpuhost")) {
+            stop("source = '", source, "' is only available for backend = ",
                  "'whisper'; openai runs via the API (source = 'api').",
                  call. = FALSE)
         }
         route <- "api"
     } else if (backend == "whisper") {
-        # auto / package -> in-process; api -> a whisper serve() endpoint
-        route <- if (source == "api") "api" else "package"
+        # package -> in-process; api -> a whisper serve() endpoint;
+        # gpuhost -> the fleet's GPU host; auto -> in-process when the
+        # package is installed, else a configured GPU host, else the
+        # package's own "not installed" refusal below
+        route <- switch(source,
+                        api = "api",
+                        gpuhost = "gpuhost",
+                        package = "package",
+                        if (!.has_whisper() && .gpu_host_configured()) {
+                            "gpuhost"
+                        } else {
+                            "package"
+                        })
     } else {
         # backend == "auto": pick engine from source and availability
         if (source == "package") {
             backend <- "whisper"
             route <- "package"
+        } else if (source == "gpuhost") {
+            backend <- "whisper"
+            route <- "gpuhost"
         } else if (source == "api") {
             backend <- if (!is.null(.get_api_base())) "openai" else "whisper"
             route <- "api"
         } else {
-            # source == "auto": whisper in-process first, then API
+            # source == "auto": whisper in-process, then the GPU host, then
+            # the API
             if (.has_whisper()) {
                 backend <- "whisper"
                 route <- "package"
+            } else if (.gpu_host_configured()) {
+                backend <- "whisper"
+                route <- "gpuhost"
             } else if (!is.null(.get_api_base())) {
                 backend <- "openai"
                 route <- "api"
@@ -113,7 +134,9 @@
                 stop(
                      "No transcription backend available.\n",
                      "Either:\n",
-                     "  - Install whisper: install.packages('whisper'), or\n",
+                     "  - Install whisper: install.packages('whisper'),\n",
+                     "  - Configure the fleet's GPU host with ",
+                     "gpu.host::gpu_host_config(), or\n",
                      "  - Set an API endpoint with set_stt_base()",
                      call. = FALSE
                 )
@@ -135,6 +158,19 @@
              "Use set_stt_base() to configure the endpoint.",
              call. = FALSE
         )
+    }
+    if (route == "gpuhost") {
+        if (!.has_gpu_host()) {
+            stop("source = 'gpuhost' needs the gpu.host package.\n",
+                 "Install with: remotes::install_github('cornball-ai/gpu.host')",
+                 call. = FALSE)
+        }
+        if (!gpu.host::gpu_host_configured()) {
+            stop("source = 'gpuhost' requested but no GPU host is configured.\n",
+                 "Use gpu.host::gpu_host_config(base = , token = ), or set ",
+                 "options(gpu.host.base = ) and options(gpu.host.token = ).",
+                 call. = FALSE)
+        }
     }
 
     list(backend = backend, route = route)

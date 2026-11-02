@@ -1,3 +1,11 @@
+# stt.api 0.3.1.4
+
+* The gpuhost source goes through gpu.ctl's client (gpu.ctl >= 0.1.0.38,
+  Suggests) instead of the retired gpu.host package: `host_infer()`,
+  `host_value()`, `host_health()`, `host_configured()`. Configure with
+  `gpu.ctl::host_config()` or `options(gpu.ctl.base, gpu.ctl.token)`; a
+  refusal is a `host_error`. utils joins Imports.
+
 # stt.api 0.3.1.3
 
 * A third place whisper runs: `source = "gpuhost"` sends the audio to

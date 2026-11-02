@@ -30,10 +30,11 @@ stt_health <- function() {
             ))
     }
 
-    # The fleet's GPU host, when gpu.host is configured: the probe asks
-    # the host what it serves, so "ok" here means a whisper entry is there
+    # The fleet's GPU host, when gpu.ctl's client is configured: the probe
+    # asks the host what it serves, so "ok" here means a whisper entry is
+    # there
     if (.gpu_host_configured()) {
-        h <- tryCatch(gpu.host::gpu_host_health(), error = function(e) e)
+        h <- tryCatch(gpu.ctl::host_health(), error = function(e) e)
         if (!inherits(h, "error")) {
             entries <- as.character(h$entries)
             if (any(startsWith(entries, "whisper"))) {
@@ -41,7 +42,7 @@ stt_health <- function() {
                             ok = TRUE,
                             backend = "gpuhost",
                             message = paste0("GPU host at ",
-                                             gpu.host::gpu_host_base(),
+                                             gpu.ctl::host_base(),
                                              " serves ",
                                              paste(entries, collapse = ", "))
                     ))
@@ -60,7 +61,7 @@ stt_health <- function() {
          ok = FALSE,
          backend = NULL,
          message = paste("No backend available. Install whisper, configure",
-                         "gpu.host, or set stt.api_base.")
+                         "a GPU host (gpu.ctl::host_config), or set stt.api_base.")
     )
 }
 

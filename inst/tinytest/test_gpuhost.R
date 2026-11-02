@@ -1,22 +1,24 @@
-# source = "gpuhost": whisper on the fleet's GPU host through gpu.host.
+# source = "gpuhost": whisper on the fleet's GPU host through gpu.ctl's
+# client.
 #
-# Everything here runs against gpu.host's request hook, so no host and no
-# network: the assertions are about what stt() sends and what it makes of
-# the host's value. The route tests fake .has_whisper so they do not
+# Everything here runs against the client's request hook, so no host and
+# no network: the assertions are about what stt() sends and what it makes
+# of the host's value. The route tests fake .has_whisper so they do not
 # depend on what this machine has installed.
 
-if (!requireNamespace("gpu.host", quietly = TRUE)) {
-    exit_file("gpu.host not installed")
+if (!requireNamespace("gpu.ctl", quietly = TRUE) ||
+    packageVersion("gpu.ctl") < "0.1.0.38") {
+    exit_file("gpu.ctl 0.1.0.38 or later not installed")
 }
 
-# ---- isolate from any real gpu.host configuration on this machine ----
+# ---- isolate from any real client configuration on this machine ----
 cfg_dir <- tempfile("stt-gpuhost-")
 old_cfg <- Sys.getenv("R_USER_CONFIG_DIR", unset = NA)
 Sys.setenv(R_USER_CONFIG_DIR = cfg_dir)
 old_env <- Sys.getenv(c("GPU_HOST_BASE", "GPU_HOST_TOKEN"), unset = NA)
 Sys.unsetenv(c("GPU_HOST_BASE", "GPU_HOST_TOKEN"))
-old_opts <- options(gpu.host.base = NULL, gpu.host.token = NULL,
-                    gpu.host.http = NULL, stt.gpuhost_entry = NULL,
+old_opts <- options(gpu.ctl.base = NULL, gpu.ctl.token = NULL,
+                    gpu.ctl.http = NULL, stt.gpuhost_entry = NULL,
                     stt.api_base = NULL, stt.timeout = 60)
 
 ns <- asNamespace("stt.api")
@@ -34,14 +36,14 @@ without_whisper <- function(expr) with_fake(".has_whisper", function() FALSE, ex
 
 # ---- not configured: the route refuses and says how to configure ----
 expect_false(stt.api:::.gpu_host_configured())
-expect_error(stt.api:::.resolve_route("whisper", "gpuhost"), "gpu_host_config")
-expect_error(stt.api:::.resolve_route("auto", "gpuhost"), "gpu_host_config")
+expect_error(stt.api:::.resolve_route("whisper", "gpuhost"), "host_config")
+expect_error(stt.api:::.resolve_route("auto", "gpuhost"), "host_config")
 expect_error(stt.api:::.resolve_route("openai", "gpuhost"), "backend = 'whisper'")
 
 # ---- configured: base and a token file ----
 tok <- tempfile("token-")
 writeBin(as.raw(1:32), tok)
-options(gpu.host.base = "http://gpu:7878", gpu.host.token = tok)
+options(gpu.ctl.base = "http://gpu:7878", gpu.ctl.token = tok)
 expect_true(stt.api:::.gpu_host_configured())
 expect_equal(stt.api:::.resolve_route("whisper", "gpuhost"),
              list(backend = "whisper", route = "gpuhost"))
@@ -56,13 +58,13 @@ expect_equal(r, list(backend = "whisper", route = "gpuhost"))
 options(stt.api_base = "http://api:1")
 r <- without_whisper(stt.api:::.resolve_route("auto", "auto"))
 expect_equal(r$route, "gpuhost")
-options(gpu.host.base = NULL)
+options(gpu.ctl.base = NULL)
 r <- without_whisper(stt.api:::.resolve_route("auto", "auto"))
 expect_equal(r, list(backend = "openai", route = "api"))
 options(stt.api_base = NULL)
 expect_error(without_whisper(stt.api:::.resolve_route("auto", "auto")),
-             "gpu_host_config")
-options(gpu.host.base = "http://gpu:7878")
+             "host_config")
+options(gpu.ctl.base = "http://gpu:7878")
 # an explicit api source is never the GPU host: it still needs a base
 expect_error(without_whisper(stt.api:::.resolve_route("whisper", "api")),
              "set_stt_base")
@@ -70,10 +72,10 @@ expect_error(without_whisper(stt.api:::.resolve_route("whisper", "api")),
 # installed, else a configured GPU host, else the package's refusal
 r <- without_whisper(stt.api:::.resolve_route("whisper", "auto"))
 expect_equal(r, list(backend = "whisper", route = "gpuhost"))
-options(gpu.host.base = NULL)
+options(gpu.ctl.base = NULL)
 expect_error(without_whisper(stt.api:::.resolve_route("whisper", "auto")),
              "not installed")
-options(gpu.host.base = "http://gpu:7878")
+options(gpu.ctl.base = "http://gpu:7878")
 
 # ---- the request on the wire, and the result from the value ----
 sent <- NULL
@@ -95,7 +97,7 @@ value <- list(
 health <- list(status = "ok", protocol = "gpu-host/1",
                entries = c("chatterbox-turbo", "whisper-small"), checks = "x")
 calls <- list()
-options(gpu.host.http = function(method, url, headers, body, timeout) {
+options(gpu.ctl.http = function(method, url, headers, body, timeout) {
     calls[[length(calls) + 1L]] <<- url
     if (grepl("/health$", url)) {
         return(envelope(list(ok = TRUE, value = health)))
@@ -124,8 +126,8 @@ expect_equal(req$entry, "whisper-small")
 # language, so none is sent
 expect_equal(names(req$input), "audio_b64")
 expect_equal(req$input$audio_b64, jsonlite::base64_enc(bytes))
-expect_equal(req$key, gpu.host::gpu_host_key("whisper-small",
-                                             list(audio_b64 = jsonlite::base64_enc(bytes))))
+expect_equal(req$key, gpu.ctl::host_key("whisper-small",
+                                        list(audio_b64 = jsonlite::base64_enc(bytes))))
 # with a model given, no health probe was needed
 expect_equal(length(calls), 1L)
 
@@ -179,7 +181,7 @@ answer <- list(status = 409L, headers = list("content-type" = "application/json"
                body = charToRaw('{"ok":false,"error":"same key, different content"}'))
 e <- tryCatch(stt(audio, model = "whisper-small", backend = "whisper",
                   source = "gpuhost"), error = function(e) e)
-expect_true(inherits(e, "gpu_host_error"))
+expect_true(inherits(e, "host_error"))
 expect_equal(e$status, 409L)
 answer <- envelope(list(ok = FALSE, error = "audio_b64 is not base64"))
 expect_error(stt(audio, model = "whisper-small", backend = "whisper",

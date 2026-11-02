@@ -21,7 +21,7 @@ timings.}
 The normalized result list.
 }
 \description{
-One \code{/infer} request through gpu.host. The entry's input is the
+One \code{/infer} request through gpu.ctl's client. The entry's input is the
 audio alone: the host's whisper entries take no language, so
 \code{language} is not sent and the result reports what the host
 detected. Segments and word timings come back always.

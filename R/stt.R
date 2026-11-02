@@ -40,7 +40,7 @@
 #'   service (OpenAI, or a self-hosted whisper server; see
 #'   \code{\link{set_stt_base}}), "package" for the in-process whisper R
 #'   package, or "gpuhost" for the fleet's GPU host through the
-#'   \pkg{gpu.host} package. "auto" runs whisper in-process when the package
+#'   \pkg{gpu.ctl} client. "auto" runs whisper in-process when the package
 #'   is installed, else on the GPU host when one is configured, else openai
 #'   via the API. Use \code{backend = "whisper", source = "api"} to
 #'   reach a whisper \code{serve()} endpoint. Such an endpoint does not
@@ -55,8 +55,8 @@
 #'   \code{options(stt.gpuhost_entry)}, else the first whisper entry the
 #'   host lists. The host's whisper entries take no language, so
 #'   \code{language} is not sent and the result reports what the host
-#'   detected. Where the host is and its token come from gpu.host's
-#'   configuration (\code{gpu.host::gpu_host_config()}); \code{stt.timeout}
+#'   detected. Where the host is and its token come from gpu.ctl's client
+#'   configuration (\code{gpu.ctl::host_config()}); \code{stt.timeout}
 #'   bounds the request.
 #' @param prompt Optional text to guide the transcription. For API backend,
 #'   this is passed as initial_prompt to help with spelling of names,
@@ -156,8 +156,8 @@
 #' # In-process whisper package
 #' result <- stt("speech.wav", backend = "whisper", source = "package")
 #'
-#' # The fleet's GPU host, configured once through gpu.host
-#' gpu.host::gpu_host_config("http://troy-g5:7878", "~/gpuhost.token")
+#' # The fleet's GPU host, configured once through gpu.ctl's client
+#' gpu.ctl::host_config("http://gpu-box:7878", "~/gpuhost.token")
 #' result <- stt("speech.wav", source = "gpuhost")
 #' }
 #'

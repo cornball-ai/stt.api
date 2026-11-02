@@ -136,7 +136,7 @@
                      "Either:\n",
                      "  - Install whisper: install.packages('whisper'),\n",
                      "  - Configure the fleet's GPU host with ",
-                     "gpu.host::gpu_host_config(), or\n",
+                     "gpu.ctl::host_config(), or\n",
                      "  - Set an API endpoint with set_stt_base()",
                      call. = FALSE
                 )
@@ -161,14 +161,14 @@
     }
     if (route == "gpuhost") {
         if (!.has_gpu_host()) {
-            stop("source = 'gpuhost' needs the gpu.host package.\n",
-                 "Install with: remotes::install_github('cornball-ai/gpu.host')",
+            stop("source = 'gpuhost' needs gpu.ctl 0.1.0.38 or later.\n",
+                 "Install with: remotes::install_github('cornball-ai/gpu.ctl')",
                  call. = FALSE)
         }
-        if (!gpu.host::gpu_host_configured()) {
+        if (!gpu.ctl::host_configured()) {
             stop("source = 'gpuhost' requested but no GPU host is configured.\n",
-                 "Use gpu.host::gpu_host_config(base = , token = ), or set ",
-                 "options(gpu.host.base = ) and options(gpu.host.token = ).",
+                 "Use gpu.ctl::host_config(base = , token = ), or set ",
+                 "options(gpu.ctl.base = ) and options(gpu.ctl.token = ).",
                  call. = FALSE)
         }
     }

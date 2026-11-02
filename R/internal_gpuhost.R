@@ -1,24 +1,26 @@
 # The fleet's GPU host as a place whisper runs: stt.api's third source.
 #
-# gpu.host is the client to a gpu.ctl host, or to the router in front of
-# several: one base, one token, POST /infer with the audio in the
-# request. This file is the model-shaped half, which is the half the
-# client refuses to know: which catalog entry, what goes in the input,
-# and how the host's value becomes stt()'s result. Audio travels base64
-# in the request body, since the worker is in a container on another
-# machine and a path names nothing it can read. The reply is the host's
-# JSON value: text, segments and word timings, always, because the
-# entry exists for callers that cut captions from them.
+# gpu.ctl's client (host_infer() and friends, from 0.1.0.38) speaks to a
+# gpu.ctl host, or to the router in front of several: one base, one
+# token, POST /infer with the audio in the request. This file is the
+# model-shaped half, which is the half the client refuses to know: which
+# catalog entry, what goes in the input, and how the host's value
+# becomes stt()'s result. Audio travels base64 in the request body,
+# since the worker is in a container on another machine and a path names
+# nothing it can read. The reply is the host's JSON value: text,
+# segments and word timings, always, because the entry exists for
+# callers that cut captions from them.
 
 .has_gpu_host <- function() {
-    requireNamespace("gpu.host", quietly = TRUE)
+    requireNamespace("gpu.ctl", quietly = TRUE) &&
+        utils::packageVersion("gpu.ctl") >= "0.1.0.38"
 }
 
 # Configured means a base resolves and the token file exists; whether
 # the host answers is the preflight's question, asked when a request is
 # made rather than every time a route is resolved.
 .gpu_host_configured <- function() {
-    .has_gpu_host() && gpu.host::gpu_host_configured()
+    .has_gpu_host() && gpu.ctl::host_configured()
 }
 
 # Which catalog entry serves whisper on this host. A property of the
@@ -36,7 +38,7 @@
     if (is.character(opt) && length(opt) == 1L && !is.na(opt) && nzchar(opt)) {
         return(opt)
     }
-    entries <- as.character(gpu.host::gpu_host_health()$entries)
+    entries <- as.character(gpu.ctl::host_health()$entries)
     hit <- entries[startsWith(entries, "whisper")]
     if (!length(hit)) {
         stop("the GPU host serves no whisper entry (it lists: ",
@@ -48,7 +50,7 @@
 
 #' Internal: Transcribe on the fleet's GPU host
 #'
-#' One \code{/infer} request through gpu.host. The entry's input is the
+#' One \code{/infer} request through gpu.ctl's client. The entry's input is the
 #' audio alone: the host's whisper entries take no language, so
 #' \code{language} is not sent and the result reports what the host
 #' detected. Segments and word timings come back always.
@@ -65,15 +67,15 @@
 .via_gpuhost <- function(file, model = NULL, language = NULL,
                          diarize = FALSE) {
     if (!.has_gpu_host()) {
-        stop("source = 'gpuhost' needs the gpu.host package.\n",
-             "Install with: remotes::install_github('cornball-ai/gpu.host')",
+        stop("source = 'gpuhost' needs gpu.ctl 0.1.0.38 or later.\n",
+             "Install with: remotes::install_github('cornball-ai/gpu.ctl')",
              call. = FALSE)
     }
     entry <- .gpuhost_entry(model)
     bytes <- readBin(file, "raw", n = file.size(file))
     input <- list(audio_b64 = jsonlite::base64_enc(bytes))
-    reply <- gpu.host::gpu_host_infer(entry, input, timeout = .get_timeout())
-    v <- gpu.host::gpu_host_value(reply)
+    reply <- gpu.ctl::host_infer(entry, input, timeout = .get_timeout())
+    v <- gpu.ctl::host_value(reply)
 
     segments <- NULL
     if (is.data.frame(v$segments) && nrow(v$segments) > 0) {

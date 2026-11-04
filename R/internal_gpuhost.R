@@ -74,7 +74,11 @@
     entry <- .gpuhost_entry(model)
     bytes <- readBin(file, "raw", n = file.size(file))
     input <- list(audio_b64 = jsonlite::base64_enc(bytes))
-    reply <- gpu.ctl::host_infer(entry, input, timeout = .get_timeout())
+    # The class is the KEY'S by default (a bot's key says interactive, a
+    # person's normal); `stt.priority` names another within the key's
+    # ceiling, for a caller whose key is shared across kinds of work.
+    reply <- gpu.ctl::host_infer(entry, input, timeout = .get_timeout(),
+                                 priority = getOption("stt.priority"))
     v <- gpu.ctl::host_value(reply)
 
     segments <- NULL

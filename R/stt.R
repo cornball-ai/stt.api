@@ -57,7 +57,10 @@
 #'   \code{language} is not sent and the result reports what the host
 #'   detected. Where the host is and its token come from gpu.ctl's client
 #'   configuration (\code{gpu.ctl::host_config()}); \code{stt.timeout}
-#'   bounds the request.
+#'   bounds the request. The host serves in priority order: the class is
+#'   the key's own unless \code{options(stt.priority)} names another
+#'   ("interactive", "normal", "batch", "idle", or a number) within the
+#'   key's ceiling.
 #' @param prompt Optional text to guide the transcription. For API backend,
 #'   this is passed as initial_prompt to help with spelling of names,
 #'   acronyms, or domain-specific terms. Ignored for whisper backend, and an

@@ -1,3 +1,9 @@
+# stt.api 0.3.1.5
+
+* The gpuhost source passes `options(stt.priority)` as the request's
+  `X-GpuHost-Priority` (gpu.ctl >= 0.1.0.39 hosts serve in priority
+  order; the class is the key's own when the option is unset).
+
 # stt.api 0.3.1.4
 
 * The gpuhost source goes through gpu.ctl's client (gpu.ctl >= 0.1.0.38,
